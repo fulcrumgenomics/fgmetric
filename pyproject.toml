@@ -12,7 +12,6 @@ license         = "MIT"
 include         = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies    = [
-    "defopt>=6.4.0"
 ]
 classifiers     = [
     "Development Status :: 3 - Alpha",
