@@ -1,0 +1,40 @@
+name: Code checks
+
+on:
+  push:
+  workflow_call:
+
+env:
+  UV_VERSION: 0.7.5
+
+jobs:
+  Tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        PYTHON_VERSION: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.PYTHON_VERSION }}
+
+      - name: Get full Python version
+        id: full-python-version
+        shell: bash
+        run: echo "version=$(python -c "import sys; print('-'.join(str(v) for v in sys.version_info))")" >> $GITHUB_OUTPUT
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: 'true'
+          cache-suffix: ${{ matrix.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Test the library
+        run: uv run poe check-all
