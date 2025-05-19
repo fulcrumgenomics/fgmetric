@@ -10,9 +10,8 @@ readme          = "README.md"
 authors         = [{ name="Fulcrum Genomics LLC", email="contact@fulcrumgenomics.com" }]
 license         = "MIT"
 include         = ["LICENSE"]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies    = [
-    "defopt>=6.4.0",
     "pydantic>=2.11.4",
 ]
 classifiers     = [
@@ -23,7 +22,6 @@ classifiers     = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Typing :: Typed",
@@ -37,7 +35,7 @@ classifiers     = [
 [project.scripts]
 fgmetric = "fgmetric.main:run"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "ruff ==0.11.10",
     "mypy ~=1.15",
@@ -49,6 +47,12 @@ dev = [
 ]
 ipython = [
     "ipython ~=9.2",
+]
+
+[project.optional-dependencies]
+benchmark = [
+    "pytest-benchmark ~=5.1.0",
+    "fgpyo ~=1.2.0",
 ]
 
 [tool.poe.tasks]
@@ -76,7 +80,6 @@ check-all.sequence    = [
     "check-tests"
 ]
 
-fix-and-check-all.ignore_fail = "return_non_zero"
 fix-and-check-all.sequence    = [
     "check-lock",
     "fix-format",
@@ -84,6 +87,8 @@ fix-and-check-all.sequence    = [
     "check-typing",
     "check-tests"
 ]
+
+benchmark = "pytest benchmarks --benchmark-only --benchmark-group-by param:num_rows"
 
 [tool.mypy]
 files                       = ["./"]
@@ -111,20 +116,24 @@ exclude                     = [
 ]
 
 [[tool.mypy.overrides]]
-module = "defopt"
+module = [
+    "pytest_benchmark.*",
+    "fgpyo.*",
+]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+testpaths = ["tests/"]
 minversion = "7.4"
 addopts    = [
     "--color=yes",
     "--import-mode=importlib",
-    "--cov"
+    "--cov",
 ]
 
 [tool.ruff]
 line-length    = 100
-target-version = "py311"
+target-version = "py312"
 output-format  = "full"
 preview        = true
 
@@ -151,11 +160,15 @@ ignore    = [
     "D212",  # summary line should be located on the same line as opening quotes
     "D100",  # missing docstring in public module
     "D104",  # missing docstring in public package
+    "D105",  # missing docstring in magic method
 ]
 unfixable = ["B"]
 # NB: only preview rules explicitly selected above (e.g. LOG015) will be enforced
 preview = true
 explicit-preview-rules = true
+
+[tool.ruff.lint.per-file-ignores]
+"benchmarks/**/*.py" = ["D103"]
 
 [tool.ruff.lint.isort]
 force-single-line = true
