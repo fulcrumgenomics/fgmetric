@@ -19,13 +19,13 @@ This package provides a proof-of-concept alternative implementation of `fgpyo.ut
 - **Lightweight dependencies.**
   Requires only `pydantic`, with no need for `attrs` or `pysam`.
 
-### Other notable differences
+### Other notable differences:
 
 - Simplified usage: No need to decorate with `@dataclass` or `@attr.s`, just subclass `Metric`.
 - Cleaner type signatures: `Metric.read()` returns a properly typed iterable, rather than `Iterator[Any]`.
 - Reduced boilerplate: `Metric` is no longer a self-referential generic, so no recursive type annotation.
 
-### Example
+### Example:
 
 ```py
 from fgmetric import Metric
