@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from pydantic import model_validator
 
 from fgmetric._typing_extensions import is_optional
+from fgmetric.collections import CounterPivotTable
 from fgmetric.collections import DelimitedList
 
 T = TypeVar("T", bound="Metric")
@@ -17,6 +18,7 @@ T = TypeVar("T", bound="Metric")
 
 class Metric(
     DelimitedList,
+    CounterPivotTable,
     BaseModel,
     ABC,
 ):
@@ -122,5 +124,17 @@ class Metric(
             ]
         else:
             fieldnames = list(cls.model_fields.keys())
+
+        # TODO fix the interaction between this and by_alias
+        if cls._counter_fieldname is None:
+            # Short circuit if we don't have a Counter field
+            return fieldnames
+
+        # Remove the declared Counter field
+        fieldnames = [f for f in fieldnames if f != cls._counter_fieldname]
+
+        # Add the enum members
+        assert cls._counter_enum is not None  # type narrowing
+        fieldnames += [member.value for member in cls._counter_enum]
 
         return fieldnames

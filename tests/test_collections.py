@@ -1,3 +1,6 @@
+from collections import Counter
+from enum import StrEnum
+from enum import unique
 from pathlib import Path
 from typing import Annotated
 
@@ -160,3 +163,53 @@ def test_list_with_optional_elements_roundtrip() -> None:
     m = FakeMetric(values=[1, None, 3])
     serialized = m.model_dump()
     assert serialized["values"] == "1,,3"
+
+
+def test_counter_pivot_table_of_enum(tmp_path: Path) -> None:
+    """Test that we can read and write Counters as pivot tables."""
+
+    @unique
+    class FakeEnum(StrEnum):  # TODO test with base Enum
+        FOO = "foo"
+        BAR = "bar"
+
+    class FakeMetric(Metric):
+        name: str
+        counts: Counter[FakeEnum]  # TODO test with counter of str
+
+    # Test reading
+    fpath_to_read = tmp_path / "test.txt"
+    with fpath_to_read.open("w") as fout:
+        fout.write("name\tfoo\tbar\n")
+        fout.write("Nils\t1\t2\n")
+
+    metrics = list(FakeMetric.read(fpath_to_read))
+
+    assert len(metrics) == 1
+    metric = metrics[0]
+    assert metric.name == "Nils"
+    assert metric.counts == Counter({FakeEnum.FOO: 1, FakeEnum.BAR: 2})
+
+    # Test writing
+    fpath_to_write = tmp_path / "written.txt"
+
+    writer: MetricWriter[FakeMetric]
+    with MetricWriter(FakeMetric, fpath_to_write) as writer:
+        writer.write(FakeMetric(name="Tim", counts=Counter({FakeEnum.FOO: 3, FakeEnum.BAR: 4})))
+
+    with fpath_to_write.open("r") as f:
+        assert next(f) == "name\tfoo\tbar\n"
+        assert next(f) == "Tim\t3\t4\n"
+        with pytest.raises(StopIteration):
+            next(f)
+
+
+def test_counter_pivot_table_raises_if_not_enum() -> None:
+    """Test we can flag type errors when declaring class."""
+    with pytest.raises(TypeError) as excinfo:
+
+        class FakeMetric(Metric):
+            name: str
+            counts: Counter[str]
+
+    assert str(excinfo.value) == "Counter fields must have a StrEnum type parameter: counts"
