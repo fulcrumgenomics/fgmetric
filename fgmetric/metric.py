@@ -9,17 +9,38 @@ from typing import TypeVar
 from pydantic import BaseModel
 from pydantic import model_validator
 
+from fgmetric._collections import DelimitedList
+
 T = TypeVar("T", bound="Metric")
 
 
-class Metric(BaseModel, ABC):
+class Metric(
+    DelimitedList,
+    BaseModel,
+    ABC,
+):
     """
-    Abstract base class for defining structured metric data models.
+    Abstract base class for defining structured "metric" data models.
 
     This class combines Pydantic's `BaseModel` with `ABC` to provide a foundation for creating
     type-safe metric classes that can be easily read from and written to delimited text files (e.g.,
     TSV, CSV). It leverages Pydantic's automatic validation and type conversion while providing
     convenient class methods for parsing metrics from files.
+
+    Metrics are delimited files containing a header and zero or more rows for metric values. When
+    using a `Metric` to read a delimited file, the `Metric`'s fields correspond to the columns and
+    header of the file. Subclasses should define their fields using Pydantic field annotations.
+
+    `Metric` includes the following custom serialization/deserialization behaviors:
+    1. **Empty fields as None.** Any empty field in a file will be represented as `None` on the
+       deserialized model.
+    2. **Delimited lists.** Any field typed as `list[T]` will be parsed from and serialized to a
+       delimited string. The list delimiter may be controlled by the `list_delimiter` class
+       variable.
+
+    Class Variables:
+        list_delimiter: A single-character delimiter used to split and join `list` fields during
+            serialization/deserialization.
 
     Example:
         ```python
@@ -32,11 +53,6 @@ class Metric(BaseModel, ABC):
         for metric in AlignmentMetric.read(Path("metrics.txt")):
             print(metric.read_name, metric.mapping_quality)
         ```
-
-    Note:
-        Subclasses should define their fields using Pydantic field annotations.
-        All field names in the input file should match the model field names or aliases.
-        Empty fields are automatically converted to `None` during validation.
     """
 
     @classmethod

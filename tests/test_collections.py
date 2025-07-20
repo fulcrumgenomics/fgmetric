@@ -1,0 +1,136 @@
+from pathlib import Path
+from typing import Annotated
+
+import pytest
+from pydantic import PlainSerializer
+
+from fgmetric import Metric
+from fgmetric import MetricWriter
+
+
+def test_comma_delimited_list(tmp_path: Path) -> None:
+    """Test that we can read and write comma-delimited lists."""
+
+    class FakeMetric(Metric):
+        name: str
+        values: list[int]
+
+    assert FakeMetric._list_fieldnames == {"values"}
+    assert FakeMetric._is_list_field("values")
+
+    # Test reading
+    fpath_to_read = tmp_path / "test.txt"
+    with fpath_to_read.open("w") as fout:
+        fout.write("name\tvalues\n")
+        fout.write("Nils\t1,2,3\n")
+
+    metrics = list(FakeMetric.read(fpath_to_read))
+
+    assert len(metrics) == 1
+    assert metrics[0].name == "Nils"
+    assert metrics[0].values == [1, 2, 3]
+
+    # Test writing
+    fpath_to_write = tmp_path / "written.txt"
+    writer: MetricWriter[FakeMetric]
+    with MetricWriter(FakeMetric, fpath_to_write) as writer:
+        writer.write(metrics[0])
+
+    with fpath_to_write.open("r") as f:
+        assert next(f) == "name\tvalues\n"
+        assert next(f) == "Nils\t1,2,3\n"
+        with pytest.raises(StopIteration):
+            next(f)
+
+
+def test_other_delimited_list(tmp_path: Path) -> None:
+    """Test that we can read and write lists with other delimiters."""
+
+    class FakeMetric(Metric):
+        list_delimiter = ";"
+
+        name: str
+        values: list[int]
+
+    # Test reading
+    fpath_to_read = tmp_path / "test.txt"
+    with fpath_to_read.open("w") as fout:
+        fout.write("name\tvalues\n")
+        fout.write("Tim\t1;2;3\n")
+
+    metrics = list(FakeMetric.read(fpath_to_read))
+
+    assert len(metrics) == 1
+    assert metrics[0].name == "Tim"
+    assert metrics[0].values == [1, 2, 3]
+
+    # Test writing
+    fpath_to_write = tmp_path / "written.txt"
+    writer: MetricWriter[FakeMetric]
+    with MetricWriter(FakeMetric, fpath_to_write) as writer:
+        writer.write(metrics[0])
+
+    with fpath_to_write.open("r") as f:
+        assert next(f) == "name\tvalues\n"
+        assert next(f) == "Tim\t1;2;3\n"
+        with pytest.raises(StopIteration):
+            next(f)
+
+
+def test_delimited_list_with_complex_types(tmp_path: Path) -> None:
+    """Test that we can read and write lists with custom formatting."""
+
+    class FakeMetric(Metric):
+        name: str
+        values: list[Annotated[float, PlainSerializer(lambda x: f"{x:.3f}")]]
+
+    # Test writing
+    fpath_to_write = tmp_path / "written.txt"
+    writer: MetricWriter[FakeMetric]
+    with MetricWriter(FakeMetric, fpath_to_write) as writer:
+        writer.write(FakeMetric(name="Clint", values=[0.1, 0.002, 0.00301]))
+
+    with fpath_to_write.open("r") as f:
+        assert next(f) == "name\tvalues\n"
+        assert next(f) == "Clint\t0.100,0.002,0.003\n"
+        with pytest.raises(StopIteration):
+            next(f)
+
+
+def test_delimited_list_with_optional_field(tmp_path: Path) -> None:
+    """Test that we can read and write lists with empty Optional fields."""
+
+    class FakeMetric(Metric):
+        name: str
+        values: list[int] | None
+
+    assert FakeMetric._list_fieldnames == {"values"}
+    assert FakeMetric._is_list_field("values")
+
+    # Test reading
+    fpath_to_read = tmp_path / "test.txt"
+    with fpath_to_read.open("w") as fout:
+        fout.write("name\tvalues\n")
+        fout.write("Nils\t\n")
+        fout.write("Tim\t1,2,3\n")
+
+    metrics = list(FakeMetric.read(fpath_to_read))
+
+    assert len(metrics) == 2
+    assert metrics[0].name == "Nils"
+    assert metrics[0].values is None
+    assert metrics[1].name == "Tim"
+    assert metrics[1].values == [1, 2, 3]
+
+    # Test writing
+    fpath_to_write = tmp_path / "written.txt"
+    writer: MetricWriter[FakeMetric]
+    with MetricWriter(FakeMetric, fpath_to_write) as writer:
+        writer.writeall(metrics)
+
+    with fpath_to_write.open("r") as f:
+        assert next(f) == "name\tvalues\n"
+        assert next(f) == "Nils\t\n"
+        assert next(f) == "Tim\t1,2,3\n"
+        with pytest.raises(StopIteration):
+            next(f)
