@@ -20,7 +20,7 @@ A type annotation may be any of the following:
 TYPE_ANNOTATION_TYPES = (type, UnionType, GenericAlias)
 
 
-def is_optional(annotation: TypeAnnotation) -> bool:
+def is_optional(annotation: TypeAnnotation | None) -> bool:
     """
     Check if a type is optional (i.e., a union containing `None`).
 
@@ -34,6 +34,9 @@ def is_optional(annotation: TypeAnnotation) -> bool:
         True if the type is a union type containing `None`.
         False otherwise.
     """
+    if annotation is None:
+        return False
+
     origin = get_origin(annotation)
     args = get_args(annotation)
 

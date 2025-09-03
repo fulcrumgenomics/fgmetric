@@ -23,22 +23,26 @@ def test_comma_delimited_list(tmp_path: Path) -> None:
     with fpath_to_read.open("w") as fout:
         fout.write("name\tvalues\n")
         fout.write("Nils\t1,2,3\n")
+        fout.write("Tim\t\n")
 
     metrics = list(FakeMetric.read(fpath_to_read))
 
-    assert len(metrics) == 1
+    assert len(metrics) == 2
     assert metrics[0].name == "Nils"
     assert metrics[0].values == [1, 2, 3]
+    assert metrics[1].name == "Tim"
+    assert metrics[1].values == []
 
     # Test writing
     fpath_to_write = tmp_path / "written.txt"
     writer: MetricWriter[FakeMetric]
     with MetricWriter(FakeMetric, fpath_to_write) as writer:
-        writer.write(metrics[0])
+        writer.writeall(metrics)
 
     with fpath_to_write.open("r") as f:
         assert next(f) == "name\tvalues\n"
         assert next(f) == "Nils\t1,2,3\n"
+        assert next(f) == "Tim\t\n"
         with pytest.raises(StopIteration):
             next(f)
 

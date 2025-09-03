@@ -62,7 +62,7 @@ class DelimitedList(BaseModel):
     def _split_lists(cls, value: Any, info: ValidationInfo) -> Any:
         """Split any fields annotated as `list[T]` on a comma delimiter."""
         if isinstance(value, str) and cls._is_list_field(info.field_name):
-            value = value.split(cls.list_delimiter)
+            value = value.split(cls.list_delimiter) if value else []
 
         return value
 

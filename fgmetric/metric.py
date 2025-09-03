@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from pydantic import model_validator
 
 from fgmetric._collections import DelimitedList
+from fgmetric._typing_extensions import is_optional
 
 T = TypeVar("T", bound="Metric")
 
@@ -66,11 +67,19 @@ class Metric(
     @model_validator(mode="before")
     @classmethod
     def _empty_field_to_none(cls, data: Any) -> Any:
-        """Treat any empty fields as None."""
-        if isinstance(data, dict):
-            for field, value in data.items():
-                if value == "":
-                    data[field] = None
+        """Treat any empty fields as None if the field is typed as Optional."""
+        if not isinstance(data, dict):
+            # short circuit
+            return data
+
+        for field, value in data.items():
+            info = cls.model_fields.get(field)
+            if info is None:
+                # Skip fields that aren't defined on the model - let the validation handle it
+                continue
+
+            if value == "" and is_optional(info.annotation):
+                data[field] = None
 
         return data
 
