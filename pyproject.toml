@@ -48,6 +48,12 @@ ipython = [
     "ipython ~=9.2",
 ]
 
+[project.optional-dependencies]
+benchmark = [
+    "pytest-benchmark ~=5.1.0",
+    "fgpyo ~=1.2.0",
+]
+
 [tool.poe.tasks]
 fix-format = "ruff format"
 fix-lint   = "ruff check --fix"
@@ -73,7 +79,6 @@ check-all.sequence    = [
     "check-tests"
 ]
 
-fix-and-check-all.ignore_fail = "return_non_zero"
 fix-and-check-all.sequence    = [
     "check-lock",
     "fix-format",
@@ -81,6 +86,8 @@ fix-and-check-all.sequence    = [
     "check-typing",
     "check-tests"
 ]
+
+benchmark = "pytest benchmarks --benchmark-only --benchmark-group-by param:num_rows"
 
 [tool.mypy]
 files                       = ["./"]
@@ -108,12 +115,20 @@ exclude                     = [
     "site/",
 ]
 
+[[tool.mypy.overrides]]
+module = [
+    "pytest_benchmark.*",
+    "fgpyo.*",
+]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
+testpaths = ["tests/"]
 minversion = "7.4"
 addopts    = [
     "--color=yes",
     "--import-mode=importlib",
-    "--cov"
+    "--cov",
 ]
 
 [tool.ruff]
@@ -159,6 +174,7 @@ explicit-preview-rules = true
 [tool.ruff.lint.per-file-ignores]
 # Ignore `D103` Missing docstring in public function in test files
 "tests/**.py" = ["D103"]
+"benchmarks/**/*.py" = ["D103"]
 
 [tool.ruff.lint.isort]
 force-single-line = true
