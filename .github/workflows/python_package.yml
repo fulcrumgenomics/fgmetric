@@ -5,7 +5,7 @@ on:
   workflow_call:
 
 env:
-  UV_VERSION: 0.7.5
+  UV_VERSION: 0.9.8
 
 jobs:
   Tests:
@@ -14,27 +14,20 @@ jobs:
       matrix:
         PYTHON_VERSION: ["3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.PYTHON_VERSION }}
-
-      - name: Get full Python version
-        id: full-python-version
-        shell: bash
-        run: echo "version=$(python -c "import sys; print('-'.join(str(v) for v in sys.version_info))")" >> $GITHUB_OUTPUT
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41  # v7.1.2
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: 'true'
           cache-suffix: ${{ matrix.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync --locked --extra dev
+        run: |
+          uv sync --locked
 
       - name: Test the library
-        run: uv run poe check-all
+        run: |
+          uv run poe check-all
