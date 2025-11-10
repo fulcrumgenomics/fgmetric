@@ -87,7 +87,7 @@ fix-and-check-all.sequence    = [
     "check-tests"
 ]
 
-benchmark = "pytest benchmarks --benchmark-only --benchmark-group-by param:num_rows"
+benchmark = "pytest --no-cov --override-ini testpaths=benchmarks --benchmark-only --benchmark-group-by param:num_rows"
 
 [tool.mypy]
 files                       = ["./"]
