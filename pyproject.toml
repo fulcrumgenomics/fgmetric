@@ -10,7 +10,7 @@ readme          = "README.md"
 authors         = [{ name="Fulcrum Genomics LLC", email="contact@fulcrumgenomics.com" }]
 license         = "MIT"
 include         = ["LICENSE"]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies    = [
     "pydantic>=2.11.4",
 ]
@@ -22,7 +22,6 @@ classifiers     = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Typing :: Typed",
@@ -36,7 +35,7 @@ classifiers     = [
 [project.scripts]
 fgmetric = "fgmetric.main:run"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "ruff ==0.11.10",
     "mypy ~=1.15",
@@ -123,7 +122,7 @@ addopts    = [
 
 [tool.ruff]
 line-length    = 100
-target-version = "py311"
+target-version = "py312"
 output-format  = "full"
 preview        = true
 
