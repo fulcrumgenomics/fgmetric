@@ -19,12 +19,6 @@ Install the project and its dependencies with:
 uv sync --locked
 ```
 
-To check successful installation, run:
-
-```console
-uv run python -c "import fgmetric"
-```
-
 ## Development and Testing
 
 See the [contributing guide](./CONTRIBUTING.md) for more information.
