@@ -10,9 +10,9 @@ readme          = "README.md"
 authors         = [{ name="Fulcrum Genomics LLC", email="contact@fulcrumgenomics.com" }]
 license         = "MIT"
 include         = ["LICENSE"]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies    = [
-    "defopt>=6.4.0"
+    "pydantic>=2.11.4",
 ]
 classifiers     = [
     "Development Status :: 3 - Alpha",
@@ -22,7 +22,6 @@ classifiers     = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Typing :: Typed",
@@ -36,15 +35,14 @@ classifiers     = [
 [project.scripts]
 fgmetric = "fgmetric.main:run"
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "ruff ==0.11.10",
-    "mypy ~=1.15",
+    "ruff ==0.14.4",
+    "mypy ==1.18.2",
     "pytest ~=8.3",
     "pytest-cov ~=6.1",
     "pytest-mock ~=3.14",
     "poethepoet ~=0.34",
-    "hatch ~=1.14",
 ]
 ipython = [
     "ipython ~=9.2",
@@ -103,15 +101,12 @@ warn_unused_ignores         = true
 enable_error_code           = [
     "ignore-without-code",
     "possibly-undefined",
+    "exhaustive-match",
 ]
 exclude                     = [
     "docs/",
     "site/",
 ]
-
-[[tool.mypy.overrides]]
-module = "defopt"
-ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "7.4"
@@ -123,12 +118,13 @@ addopts    = [
 
 [tool.ruff]
 line-length    = 100
-target-version = "py311"
+target-version = "py312"
 output-format  = "full"
 preview        = true
 
 [tool.ruff.lint]
 select    = [
+    "A",      # Builtin shadowing
     "ARG",    # Unused arguments
     "C901",   # McCabe complexity
     "B",      # bugbear
@@ -143,6 +139,9 @@ select    = [
     "N",      # PEP8 naming
     "W",      # pycodestyle warnings
     "Q",      # flake8-quotes
+    "RUF008", # Do not use mutable default values for dataclass attributes 
+    "RUF012", # Mutable class attributes should be annotated with typing.ClassVar
+    "RUF024", # Do not pass mutable objects as values to dict.fromKeys
 ]
 ignore    = [
     "E203",
@@ -156,10 +155,13 @@ unfixable = ["B"]
 preview = true
 explicit-preview-rules = true
 
+[tool.ruff.lint.per-file-ignores]
+# Ignore `D103` Missing docstring in public function in test files
+"tests/**.py" = ["D103"]
+
 [tool.ruff.lint.isort]
 force-single-line = true
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
-
 
