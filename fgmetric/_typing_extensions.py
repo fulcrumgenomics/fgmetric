@@ -75,13 +75,32 @@ def unpack_optional(annotation: TypeAnnotation) -> TypeAnnotation:
         return cast(UnionType, reduce(or_, args))
 
 
-def is_list(annotation: TypeAnnotation | None) -> bool:
-    """True if the type annotation is not None and a list type."""
+def has_origin(annotation: TypeAnnotation | None, origin: type) -> bool:
+    """
+    Check if a type annotation is a parameterized collection of the given type.
+
+    Args:
+        annotation: A type annotation.
+        origin: The collection type to check for (e.g., `list`, `set`, `Counter`).
+
+    Returns:
+        True if the annotation is a parameterized instance of `origin`.
+        False otherwise.
+    """
     if annotation is None:
         return False
-    elif get_origin(annotation) is list:
+    elif get_origin(annotation) is origin:
         return True
-    elif is_optional(annotation) and get_origin(unpack_optional(annotation)) is list:
+    elif is_optional(annotation) and get_origin(unpack_optional(annotation)) is origin:
         return True
     else:
         return False
+
+
+def is_list(annotation: TypeAnnotation | None) -> bool:
+    """
+    Check if a type annotation is a list type.
+
+    Matches `list[T]`, `Optional[list[T]]`, and `list[T] | None`.
+    """
+    return has_origin(annotation, list)

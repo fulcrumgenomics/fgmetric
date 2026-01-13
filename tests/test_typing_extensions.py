@@ -4,6 +4,7 @@ from typing import Union
 import pytest
 
 from fgmetric._typing_extensions import TypeAnnotation
+from fgmetric._typing_extensions import has_origin
 from fgmetric._typing_extensions import is_list
 from fgmetric._typing_extensions import is_optional
 from fgmetric._typing_extensions import unpack_optional
@@ -73,3 +74,34 @@ def test_is_list(annotation: TypeAnnotation) -> None:
 def test_is_not_list(annotation: TypeAnnotation) -> None:
     """Should reject non-list types."""
     assert not is_list(annotation)
+
+
+@pytest.mark.parametrize(
+    "annotation,collection_type",
+    [
+        (list[int], list),
+        (set[str], set),
+        (dict[str, int], dict),
+    ],
+)
+def test_has_origin(annotation: TypeAnnotation, collection_type: type) -> None:
+    """Should identify parameterized collection types."""
+    assert has_origin(annotation, collection_type)
+
+
+@pytest.mark.parametrize(
+    "annotation,collection_type",
+    [
+        (list[int] | None, list),
+        (Optional[set[str]], set),
+    ],
+)
+def test_has_origin_optional(annotation: TypeAnnotation, collection_type: type) -> None:
+    """Should identify optional collection types."""
+    assert has_origin(annotation, collection_type)
+
+
+def test_has_origin_rejects_wrong_type() -> None:
+    """Should reject collections of different types."""
+    assert not has_origin(list[int], set)
+    assert not has_origin(set[str], list)
