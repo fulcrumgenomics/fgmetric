@@ -59,12 +59,24 @@ class Metric(BaseModel, ABC):
         return data
 
     @classmethod
-    def _fieldnames(cls, by_alias: bool = False) -> list[str]:
+    def _header_fieldnames(cls, by_alias: bool = False) -> list[str]:
         """
-        Get the metric's fieldnames.
+        Return the fieldnames to use as a header row when writing metrics to a file.
+
+        This method is used by `MetricWriter` to construct the underlying `csv.DictWriter`.
+        It returns the fieldnames that will appear in serialized output, which may differ from
+        the model's field names when aliases are used.
+
+        Note:
+            This method is deliberately not used during reading/validation. Note that the `read()`
+            method omits the `fieldnames` parameter from `csv.DictReader` so that any missing or
+            misspecified fields are handled by pydantic's model validation.
 
         Args:
             by_alias: If `True`, field aliases will be returned for fields that have them.
+
+        Returns:
+            The list of fieldnames to use as the header row.
         """
         # TODO: support returning the set of fields that would be constructed if the class has a
         # custom model serializer

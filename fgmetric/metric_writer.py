@@ -69,7 +69,7 @@ class MetricWriter[T: Metric](AbstractContextManager):
 
         self._writer = DictWriter(
             f=self._fout,
-            fieldnames=self._metric_class._fieldnames(),
+            fieldnames=self._metric_class._header_fieldnames(),
             delimiter=delimiter,
             lineterminator=lineterminator,
         )
