@@ -48,6 +48,12 @@ ipython = [
     "ipython ~=9.2",
 ]
 
+[project.optional-dependencies]
+benchmark = [
+    "pytest-benchmark ~=5.1.0",
+    "fgpyo ~=1.2.0",
+]
+
 [tool.poe.tasks]
 fix-format = "ruff format"
 fix-lint   = "ruff check --fix"
@@ -61,7 +67,7 @@ fix-all.sequence    = [
 check-lock   = "uv lock --check"
 check-format = "ruff format --check --diff"
 check-lint   = "ruff check"
-check-tests  = "pytest"
+check-tests  = "pytest --ignore=tests/benchmarks"
 check-typing = "mypy"
 
 check-all.ignore_fail = "return_non_zero"
@@ -73,7 +79,6 @@ check-all.sequence    = [
     "check-tests"
 ]
 
-fix-and-check-all.ignore_fail = "return_non_zero"
 fix-and-check-all.sequence    = [
     "check-lock",
     "fix-format",
@@ -81,6 +86,8 @@ fix-and-check-all.sequence    = [
     "check-typing",
     "check-tests"
 ]
+
+benchmark = "pytest --no-cov --benchmark-group-by param:num_rows --override-ini testpaths=tests/benchmarks"
 
 [tool.mypy]
 files                       = ["./"]
@@ -108,13 +115,24 @@ exclude                     = [
     "site/",
 ]
 
+[[tool.mypy.overrides]]
+module = [
+    "pytest_benchmark.*",
+    "fgpyo.*",
+]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
+testpaths = ["tests/"]
 minversion = "7.4"
 addopts    = [
     "--color=yes",
     "--import-mode=importlib",
-    "--cov"
+    "--cov",
 ]
+
+[tool.coverage.run]
+omit = ["tests/benchmarks/*"]
 
 [tool.ruff]
 line-length    = 100
