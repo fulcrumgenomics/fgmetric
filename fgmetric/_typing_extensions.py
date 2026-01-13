@@ -1,7 +1,10 @@
+from functools import reduce
+from operator import or_
 from types import GenericAlias
 from types import NoneType
 from types import UnionType
 from typing import Union
+from typing import cast
 from typing import get_args
 from typing import get_origin
 
@@ -19,47 +22,57 @@ TYPE_ANNOTATION_TYPES = (type, UnionType, GenericAlias)
 
 def is_optional(annotation: TypeAnnotation) -> bool:
     """
-    Check if a type is `Optional`.
+    Check if a type is optional (i.e., a union containing `None`).
 
     An optional type may be declared using three syntaxes: `Optional[T]`, `Union[T, None]`, or
-    `T | None`. All of these syntaxes are supported by this function.
-
-    For simplicity, this function does not permit `T` to be a union type.
+    `T | None`. Higher-arity unions are also supported (e.g., `T | U | None`).
 
     Args:
         annotation: A type annotation.
 
     Returns:
-        True if the type is a union type with exactly two elements, one of which is `None`.
+        True if the type is a union type containing `None`.
         False otherwise.
-
-    Raises:
-        TypeError: If the input is not a valid `TypeAnnotation` type.
     """
     origin = get_origin(annotation)
     args = get_args(annotation)
 
     # Optional[T] and Union[T, None] have `typing.Union` as its origin.
     # PEP604 syntax (`T | None`) has `types.UnionType` as its origin.
-    return (
-        origin is not None
-        and (origin is Union or origin is UnionType)
-        and len(args) == 2
-        and NoneType in args
-    )
+    return origin is not None and (origin is Union or origin is UnionType) and NoneType in args
 
 
 def unpack_optional(annotation: TypeAnnotation) -> TypeAnnotation:
-    """Retrieve the parameterized type of the Optional."""
+    """
+    Retrieve the non-None type(s) from an optional type annotation.
+
+    For simple optionals like `T | None`, returns `T`.
+    For higher-arity unions like `T | U | None`, returns `T | U`.
+
+    Args:
+        annotation: An optional type annotation.
+
+    Returns:
+        The type annotation with `None` removed.
+
+    Raises:
+        ValueError: If the input is not an optional type.
+    """
     if not is_optional(annotation):
         raise ValueError(f"Type is not Optional: {annotation}")
 
-    args = [t for t in get_args(annotation) if t is not NoneType]
-    type_parameter = args[0]
+    args = tuple(t for t in get_args(annotation) if t is not NoneType)
 
-    assert isinstance(type_parameter, TYPE_ANNOTATION_TYPES)  # type narrowing
-
-    return type_parameter
+    if len(args) == 1:
+        type_parameter = args[0]
+        assert isinstance(type_parameter, TYPE_ANNOTATION_TYPES)  # type narrowing
+        return type_parameter
+    else:
+        # Reconstruct a union from the remaining types
+        # NB: applying `or_` to a sequence of type annotations will yield a `UnionType`.
+        # NB: it is possible to construct a union using `Union[args]`, however this creates a typing
+        # special form (`_UnionGenericAlias`) instead of a `UnionType`.
+        return cast(UnionType, reduce(or_, args))
 
 
 def is_list(annotation: TypeAnnotation | None) -> bool:

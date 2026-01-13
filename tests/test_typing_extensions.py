@@ -15,10 +15,12 @@ from fgmetric._typing_extensions import unpack_optional
         Union[str, None],
         Optional[str],
         str | None,
+        Union[str, int, None],
+        str | int | None,
     ],
 )
 def test_is_optional(annotation: TypeAnnotation) -> None:
-    """Should identify optional union types."""
+    """Should identify optional union types, including higher-arity unions."""
     assert is_optional(annotation)
 
 
@@ -27,9 +29,7 @@ def test_is_optional(annotation: TypeAnnotation) -> None:
     [
         str,
         Union[str, int],
-        Union[str, int, None],
         str | int,
-        str | int | None,
     ],
 )
 def test_is_not_optional(annotation: TypeAnnotation) -> None:
@@ -40,6 +40,13 @@ def test_is_not_optional(annotation: TypeAnnotation) -> None:
 def test_unpack_optional() -> None:
     """Should retrieve the parameterized type."""
     assert unpack_optional(int | None) is int
+
+
+def test_unpack_optional_higher_arity() -> None:
+    """Should reconstruct a union from higher-arity optionals."""
+    result = unpack_optional(str | int | None)
+    # The result should be str | int (a UnionType)
+    assert result == str | int
 
 
 @pytest.mark.parametrize(
