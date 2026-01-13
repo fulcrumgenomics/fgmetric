@@ -1,4 +1,5 @@
 from types import GenericAlias
+from types import NoneType
 from types import UnionType
 from typing import Union
 from typing import get_args
@@ -44,7 +45,7 @@ def is_optional(annotation: TypeAnnotation) -> bool:
         origin is not None
         and (origin is Union or origin is UnionType)
         and len(args) == 2
-        and type(None) in args
+        and NoneType in args
     )
 
 
@@ -53,7 +54,7 @@ def unpack_optional(annotation: TypeAnnotation) -> TypeAnnotation:
     if not is_optional(annotation):
         raise ValueError(f"Type is not Optional: {annotation}")
 
-    args = [t for t in get_args(annotation) if t is not type(None)]
+    args = [t for t in get_args(annotation) if t is not NoneType]
     type_parameter = args[0]
 
     assert isinstance(type_parameter, TYPE_ANNOTATION_TYPES)  # type narrowing
