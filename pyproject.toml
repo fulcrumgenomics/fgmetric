@@ -67,7 +67,7 @@ fix-all.sequence    = [
 check-lock   = "uv lock --check"
 check-format = "ruff format --check --diff"
 check-lint   = "ruff check"
-check-tests  = "pytest"
+check-tests  = "pytest --ignore=tests/benchmarks"
 check-typing = "mypy"
 
 check-all.ignore_fail = "return_non_zero"
@@ -87,7 +87,7 @@ fix-and-check-all.sequence    = [
     "check-tests"
 ]
 
-benchmark = "pytest --no-cov --override-ini testpaths=benchmarks --benchmark-only --benchmark-group-by param:num_rows"
+benchmark = "pytest --no-cov --benchmark-group-by param:num_rows --override-ini testpaths=tests/benchmarks"
 
 [tool.mypy]
 files                       = ["./"]
@@ -130,6 +130,9 @@ addopts    = [
     "--import-mode=importlib",
     "--cov",
 ]
+
+[tool.coverage.run]
+omit = ["tests/benchmarks/*"]
 
 [tool.ruff]
 line-length    = 100
@@ -174,7 +177,6 @@ explicit-preview-rules = true
 [tool.ruff.lint.per-file-ignores]
 # Ignore `D103` Missing docstring in public function in test files
 "tests/**.py" = ["D103"]
-"benchmarks/**/*.py" = ["D103"]
 
 [tool.ruff.lint.isort]
 force-single-line = true
