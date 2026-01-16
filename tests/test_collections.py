@@ -138,3 +138,25 @@ def test_delimited_list_with_optional_field(tmp_path: Path) -> None:
         assert next(f) == "Tim\t1,2,3\n"
         with pytest.raises(StopIteration):
             next(f)
+
+
+def test_list_with_optional_elements() -> None:
+    """Test that list[T | None] handles empty elements as None."""
+
+    class FakeMetric(Metric):
+        name: str
+        values: list[int | None]
+
+    m = FakeMetric.model_validate({"name": "test", "values": "1,,3"})
+    assert m.values == [1, None, 3]
+
+
+def test_list_with_optional_elements_roundtrip() -> None:
+    """Test roundtrip for list[T | None]."""
+
+    class FakeMetric(Metric):
+        values: list[int | None]
+
+    m = FakeMetric(values=[1, None, 3])
+    serialized = m.model_dump()
+    assert serialized["values"] == "1,,3"

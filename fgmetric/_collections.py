@@ -9,6 +9,7 @@ from pydantic import ValidationInfo
 from pydantic import field_serializer
 from pydantic import field_validator
 
+from fgmetric._typing_extensions import has_optional_elements
 from fgmetric._typing_extensions import is_list
 
 
@@ -38,6 +39,7 @@ class DelimitedList(BaseModel):
 
     collection_delimiter: ClassVar[str] = ","
     _list_fieldnames: ClassVar[set[str]]
+    _optional_element_fieldnames: ClassVar[set[str]]
 
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
@@ -54,6 +56,11 @@ class DelimitedList(BaseModel):
         cls._list_fieldnames = {
             name for name, info in cls.model_fields.items() if is_list(info.annotation)
         }
+        cls._optional_element_fieldnames = {
+            name
+            for name, info in cls.model_fields.items()
+            if has_optional_elements(info.annotation)
+        }
 
     @classmethod
     def _require_single_character_collection_delimiter(cls) -> None:
@@ -69,7 +76,15 @@ class DelimitedList(BaseModel):
     def _split_lists(cls, value: Any, info: ValidationInfo) -> Any:
         """Split any fields annotated as `list[T]` on a comma delimiter."""
         if isinstance(value, str) and cls._is_list_field(info.field_name):
-            value = value.split(cls.collection_delimiter) if value else []
+            if value:
+                value = value.split(cls.collection_delimiter)
+
+                # Convert empty strings to None for list[T | None] fields
+                if info.field_name in cls._optional_element_fieldnames:
+                    value = [None if el == "" else el for el in value]
+
+            else:
+                value = []
 
         return value
 
@@ -89,7 +104,9 @@ class DelimitedList(BaseModel):
 
             if isinstance(serialized_value, list):
                 # If the handler returned a list, join it. (This is the expected branch.)
-                return self.collection_delimiter.join([str(item) for item in serialized_value])
+                # Also serialize `None` back to empty string.
+                elements = ["" if item is None else str(item) for item in serialized_value]
+                return self.collection_delimiter.join(elements)
             else:
                 # If the handler already serialized to something else (unlikely), return as-is.
                 return serialized_value
