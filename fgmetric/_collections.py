@@ -29,6 +29,11 @@ class DelimitedList(BaseModel):
 
     The delimiter may be configured by specifying the `collection_delimiter` class variable when
     declaring a model.
+
+    Note:
+        Roundtrips are lossy if list elements contain the delimiter character. For example, with the
+        default comma delimiter, `["a,b", "c"]` serializes to `"a,b,c"` and deserializes back to
+        `["a", "b", "c"]`. Avoid using delimiters that may appear in element values.
     """
 
     collection_delimiter: ClassVar[str] = ","

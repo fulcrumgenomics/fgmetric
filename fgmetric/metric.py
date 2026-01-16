@@ -66,7 +66,7 @@ class Metric(
 
     # NB: "Before" validators (mode="before") run before field validators such as
     # `DelimitedList._split_lists()`. Empty strings in Optional fields will always be converted to
-    # `None` before any field validators. 
+    # `None` before any field validators.
     # For example, for delimited list parsing:
     #   - When a field is defined as `list[T] | None`, this converts "" → None before _split_lists
     #     sees it.
