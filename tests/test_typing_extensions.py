@@ -142,5 +142,5 @@ def test_has_optional_elements(annotation: TypeAnnotation) -> None:
     ],
 )
 def test_not_has_optional_elements(annotation: TypeAnnotation) -> None:
-    """Should identify optional collection types."""
+    """Should reject non-optional collection types."""
     assert not has_optional_elements(annotation)
