@@ -87,7 +87,7 @@ class DelimitedList(BaseModel):
                 # If the handler already serialized to something else (unlikely), return as-is.
                 return serialized_value
 
-        return value
+        return nxt(value)
 
     @final
     @classmethod
