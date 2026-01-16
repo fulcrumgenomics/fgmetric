@@ -9,17 +9,39 @@ from typing import TypeVar
 from pydantic import BaseModel
 from pydantic import model_validator
 
+from fgmetric._typing_extensions import is_optional
+from fgmetric.collections import DelimitedList
+
 T = TypeVar("T", bound="Metric")
 
 
-class Metric(BaseModel, ABC):
+class Metric(
+    DelimitedList,
+    BaseModel,
+    ABC,
+):
     """
-    Abstract base class for defining structured metric data models.
+    Abstract base class for defining structured "metric" data models.
 
     This class combines Pydantic's `BaseModel` with `ABC` to provide a foundation for creating
     type-safe metric classes that can be easily read from and written to delimited text files (e.g.,
     TSV, CSV). It leverages Pydantic's automatic validation and type conversion while providing
     convenient class methods for parsing metrics from files.
+
+    Metrics are delimited files containing a header and zero or more rows for metric values. When
+    using a `Metric` to read a delimited file, the `Metric`'s fields correspond to the columns and
+    header of the file. Subclasses should define their fields using Pydantic field annotations.
+
+    `Metric` includes the following custom serialization/deserialization behaviors:
+    1. **Empty fields as None.** Any empty field in a file will be represented as `None` on the
+       deserialized model.
+    2. **Delimited lists.** Any field typed as `list[T]` will be parsed from and serialized to a
+       delimited string. The list delimiter may be controlled by the `collection_delimiter` class
+       variable.
+
+    Class Variables:
+        collection_delimiter: A single-character delimiter used to split and join `list` fields
+            during serialization/deserialization.
 
     Example:
         ```python
@@ -32,11 +54,6 @@ class Metric(BaseModel, ABC):
         for metric in AlignmentMetric.read(Path("metrics.txt")):
             print(metric.read_name, metric.mapping_quality)
         ```
-
-    Note:
-        Subclasses should define their fields using Pydantic field annotations.
-        All field names in the input file should match the model field names or aliases.
-        Empty fields are automatically converted to `None` during validation.
     """
 
     @classmethod
@@ -47,14 +64,30 @@ class Metric(BaseModel, ABC):
             for record in DictReader(fin, delimiter=delimiter):
                 yield cls.model_validate(record)
 
+    # NB: "Before" validators (mode="before") run before field validators such as
+    # `DelimitedList._split_lists()`. Empty strings in Optional fields will always be converted to
+    # `None` before any field validators.
+    # For example, for delimited list parsing:
+    #   - When a field is defined as `list[T] | None`, this converts "" → None before _split_lists
+    #     sees it.
+    #   - When a field is defined as `list[T]`, "" passes through unchanged, then _split_lists
+    #     converts "" → [].
     @model_validator(mode="before")
     @classmethod
     def _empty_field_to_none(cls, data: Any) -> Any:
-        """Treat any empty fields as None."""
-        if isinstance(data, dict):
-            for field, value in data.items():
-                if value == "":
-                    data[field] = None
+        """Treat any empty fields as None if the field is typed as Optional."""
+        if not isinstance(data, dict):
+            # short circuit
+            return data
+
+        for field, value in data.items():
+            info = cls.model_fields.get(field)
+            if info is None:
+                # Skip fields that aren't defined on the model - let the validation handle it
+                continue
+
+            if value == "" and is_optional(info.annotation):
+                data[field] = None
 
         return data
 

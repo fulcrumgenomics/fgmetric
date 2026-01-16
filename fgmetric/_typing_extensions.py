@@ -20,7 +20,7 @@ A type annotation may be any of the following:
 TYPE_ANNOTATION_TYPES = (type, UnionType, GenericAlias)
 
 
-def is_optional(annotation: TypeAnnotation) -> bool:
+def is_optional(annotation: TypeAnnotation | None) -> bool:
     """
     Check if a type is optional (i.e., a union containing `None`).
 
@@ -34,6 +34,9 @@ def is_optional(annotation: TypeAnnotation) -> bool:
         True if the type is a union type containing `None`.
         False otherwise.
     """
+    if annotation is None:
+        return False
+
     origin = get_origin(annotation)
     args = get_args(annotation)
 
@@ -73,6 +76,22 @@ def unpack_optional(annotation: TypeAnnotation) -> TypeAnnotation:
         # NB: it is possible to construct a union using `Union[args]`, however this creates a typing
         # special form (`_UnionGenericAlias`) instead of a `UnionType`.
         return cast(UnionType, reduce(or_, args))
+
+
+def has_optional_elements(annotation: TypeAnnotation | None) -> bool:
+    """True if annotation is a list with optional element type (e.g., list[int | None])."""
+    if annotation is None:
+        return False
+
+    # Handle optional list fields (list[T] | None)
+    if is_optional(annotation):
+        annotation = unpack_optional(annotation)
+
+    if not is_list(annotation):
+        return False
+
+    args = get_args(annotation)
+    return len(args) == 1 and is_optional(args[0])
 
 
 def has_origin(annotation: TypeAnnotation | None, origin: type) -> bool:
