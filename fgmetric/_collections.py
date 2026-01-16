@@ -29,7 +29,7 @@ class DelimitedList(BaseModel):
     a model.
     """
 
-    list_delimiter: ClassVar[str] = ","
+    collection_delimiter: ClassVar[str] = ","
     _list_fieldnames: ClassVar[set[str]]
 
     @classmethod
