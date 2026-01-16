@@ -9,8 +9,8 @@ from typing import TypeVar
 from pydantic import BaseModel
 from pydantic import model_validator
 
-from fgmetric._collections import DelimitedList
 from fgmetric._typing_extensions import is_optional
+from fgmetric.collections import DelimitedList
 
 T = TypeVar("T", bound="Metric")
 
