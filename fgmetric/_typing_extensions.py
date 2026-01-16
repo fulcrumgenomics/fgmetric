@@ -78,6 +78,22 @@ def unpack_optional(annotation: TypeAnnotation) -> TypeAnnotation:
         return cast(UnionType, reduce(or_, args))
 
 
+def has_optional_elements(annotation: TypeAnnotation | None) -> bool:
+    """True if annotation is a list with optional element type (e.g., list[int | None])."""
+    if annotation is None:
+        return False
+
+    # Handle optional list fields (list[T] | None)
+    if is_optional(annotation):
+        annotation = unpack_optional(annotation)
+
+    if not is_list(annotation):
+        return False
+
+    args = get_args(annotation)
+    return len(args) == 1 and is_optional(args[0])
+
+
 def has_origin(annotation: TypeAnnotation | None, origin: type) -> bool:
     """
     Check if a type annotation is a parameterized collection of the given type.
