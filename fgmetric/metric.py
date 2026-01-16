@@ -36,7 +36,7 @@ class Metric(
     1. **Empty fields as None.** Any empty field in a file will be represented as `None` on the
        deserialized model.
     2. **Delimited lists.** Any field typed as `list[T]` will be parsed from and serialized to a
-       delimited string. The list delimiter may be controlled by the `list_delimiter` class
+       delimited string. The list delimiter may be controlled by the `collection_delimiter` class
        variable.
 
     Class Variables:

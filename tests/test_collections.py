@@ -51,7 +51,7 @@ def test_other_delimited_list(tmp_path: Path) -> None:
     """Test that we can read and write lists with other delimiters."""
 
     class FakeMetric(Metric):
-        list_delimiter = ";"
+        collection_delimiter = ";"
 
         name: str
         values: list[int]

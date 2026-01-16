@@ -25,8 +25,8 @@ class DelimitedList(BaseModel):
     `list[T] | None` - as with any primitive type, `None` will be validated from and serialized to
     the empty string.
 
-    The delimiter may be configured by specifying the `list_delimiter` class variable when declaring
-    a model.
+    The delimiter may be configured by specifying the `collection_delimiter` class variable when
+    declaring a model.
     """
 
     collection_delimiter: ClassVar[str] = ","
@@ -37,23 +37,23 @@ class DelimitedList(BaseModel):
         """
         Validations of the user-defined model.
 
-        1. The list delimiter must be a single character.
+        1. The collection delimiter must be a single character.
         2. The names of all fields annotated as `list[T]` or `list[T] | None` are stored in the
            private `_list_fieldnames` class variable.
         """
         super().__pydantic_init_subclass__(**kwargs)
 
-        cls._require_single_character_list_delimiter()
+        cls._require_single_character_collection_delimiter()
         cls._list_fieldnames = {
             name for name, info in cls.model_fields.items() if is_list(info.annotation)
         }
 
     @classmethod
-    def _require_single_character_list_delimiter(cls) -> None:
-        """Require list delimiters to be single characters."""
-        if len(cls.list_delimiter) != 1:
+    def _require_single_character_collection_delimiter(cls) -> None:
+        """Require collection delimiters to be single characters."""
+        if len(cls.collection_delimiter) != 1:
             raise ValueError(
-                f"Class list delimiter must be a single character: {cls.list_delimiter}"
+                f"Class collection delimiter must be a single character: {cls.collection_delimiter}"
             )
 
     @final
@@ -62,7 +62,7 @@ class DelimitedList(BaseModel):
     def _split_lists(cls, value: Any, info: ValidationInfo) -> Any:
         """Split any fields annotated as `list[T]` on a comma delimiter."""
         if isinstance(value, str) and cls._is_list_field(info.field_name):
-            value = value.split(cls.list_delimiter) if value else []
+            value = value.split(cls.collection_delimiter) if value else []
 
         return value
 
@@ -82,7 +82,7 @@ class DelimitedList(BaseModel):
 
             if isinstance(serialized_value, list):
                 # If the handler returned a list, join it. (This is the expected branch.)
-                return self.list_delimiter.join([str(item) for item in serialized_value])
+                return self.collection_delimiter.join([str(item) for item in serialized_value])
             else:
                 # If the handler already serialized to something else (unlikely), return as-is.
                 return serialized_value
