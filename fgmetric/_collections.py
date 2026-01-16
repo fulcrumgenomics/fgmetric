@@ -35,6 +35,36 @@ class DelimitedList(BaseModel):
         Roundtrips are lossy if list elements contain the delimiter character. For example, with the
         default comma delimiter, `["a,b", "c"]` serializes to `"a,b,c"` and deserializes back to
         `["a", "b", "c"]`. Avoid using delimiters that may appear in element values.
+
+    Examples:
+        Basic usage with comma delimiter (default):
+
+        ```python
+        class MyMetric(Metric):
+            tags: list[int]  # "1,2,3" becomes [1, 2, 3]
+        ```
+
+        Custom delimiter:
+
+        ```python
+        class MyMetric(Metric):
+            collection_delimiter = ";"
+            tags: list[int]  # "1;2;3" becomes [1, 2, 3]
+        ```
+
+        Optional list field:
+
+        ```python
+        class MyMetric(Metric):
+            tags: list[int] | None  # "" becomes None
+        ```
+
+        List field with Optional elements:
+
+        ```python
+        class MyMetric(Metric):
+            tags: list[int | None]  # "1,,3" becomes [1, None, 3]
+        ```
     """
 
     collection_delimiter: ClassVar[str] = ","

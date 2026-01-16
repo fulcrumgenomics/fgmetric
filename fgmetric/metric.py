@@ -40,8 +40,8 @@ class Metric(
        variable.
 
     Class Variables:
-        list_delimiter: A single-character delimiter used to split and join `list` fields during
-            serialization/deserialization.
+        collection_delimiter: A single-character delimiter used to split and join `list` fields
+            during serialization/deserialization.
 
     Example:
         ```python
