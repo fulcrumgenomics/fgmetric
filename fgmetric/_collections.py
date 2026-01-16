@@ -12,6 +12,8 @@ from pydantic import field_validator
 from fgmetric._typing_extensions import is_list
 
 
+# NB: Inheriting from BaseModel is necessary to declare field/model validators on the mixin, and
+# for the class-level validations defined in `__pydantic_init_subclass__` to work.
 class DelimitedList(BaseModel):
     """
     Serialize and deserialize delimited lists of (de)serializable types.

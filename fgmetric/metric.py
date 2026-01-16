@@ -64,6 +64,14 @@ class Metric(
             for record in DictReader(fin, delimiter=delimiter):
                 yield cls.model_validate(record)
 
+    # NB: "Before" validators (mode="before") run before field validators such as
+    # `DelimitedList._split_lists()`. Empty strings in Optional fields will always be converted to
+    # `None` before any field validators. 
+    # For example, for delimited list parsing:
+    #   - When a field is defined as `list[T] | None`, this converts "" → None before _split_lists
+    #     sees it.
+    #   - When a field is defined as `list[T]`, "" passes through unchanged, then _split_lists
+    #     converts "" → [].
     @model_validator(mode="before")
     @classmethod
     def _empty_field_to_none(cls, data: Any) -> Any:
