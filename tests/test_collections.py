@@ -204,6 +204,34 @@ def test_counter_pivot_table_of_enum(tmp_path: Path) -> None:
             next(f)
 
 
+def test_counter_pivot_table_missing_enum_members_default_to_zero(tmp_path: Path) -> None:
+    """Test that missing enum members in input default to 0."""
+
+    @unique
+    class FakeEnum(StrEnum):
+        FOO = "foo"
+        BAR = "bar"
+        BAZ = "baz"
+
+    class FakeMetric(Metric):
+        name: str
+        counts: Counter[FakeEnum]
+
+    # Input only has "foo" column, missing "bar" and "baz"
+    fpath = tmp_path / "test.txt"
+    with fpath.open("w") as fout:
+        fout.write("name\tfoo\n")
+        fout.write("test\t5\n")
+
+    metrics = list(FakeMetric.read(fpath))
+
+    assert len(metrics) == 1
+    metric = metrics[0]
+    assert metric.counts[FakeEnum.FOO] == 5
+    assert metric.counts[FakeEnum.BAR] == 0
+    assert metric.counts[FakeEnum.BAZ] == 0
+
+
 def test_counter_pivot_table_raises_if_not_enum() -> None:
     """Test we can flag type errors when declaring class."""
     with pytest.raises(TypeError) as excinfo:
