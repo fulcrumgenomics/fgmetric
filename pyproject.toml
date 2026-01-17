@@ -43,6 +43,7 @@ dev = [
     "pytest-cov ~=6.1",
     "pytest-mock ~=3.14",
     "poethepoet ~=0.34",
+    "pre-commit ~=4.0",
 ]
 ipython = [
     "ipython ~=9.2",
