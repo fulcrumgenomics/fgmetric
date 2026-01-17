@@ -112,6 +112,9 @@ class CounterPivotTable(BaseModel):
             # Short circuit if we don't have a dictionary
             return data
 
+        # Copy to avoid mutating caller's dict
+        data = dict(data)
+
         if cls._counter_fieldname is None:
             # Short circuit if we don't have a Counter field
             return data
