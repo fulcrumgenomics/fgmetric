@@ -127,11 +127,5 @@ def is_list(annotation: TypeAnnotation | None) -> bool:
 
 
 def is_counter(annotation: TypeAnnotation | None) -> bool:
-    """
-    True if the type annotation is a Counter.
-
-    Optional Counters are not permitted.
-    """
-    return (
-        annotation is not None and get_origin(annotation) is Counter and not is_optional(annotation)
-    )
+    """True if the type annotation is a Counter."""
+    return has_origin(annotation, Counter)

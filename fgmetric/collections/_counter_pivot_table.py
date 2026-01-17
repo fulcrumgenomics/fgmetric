@@ -12,6 +12,7 @@ from pydantic import model_validator
 from pydantic.fields import FieldInfo
 
 from fgmetric._typing_extensions import is_counter
+from fgmetric._typing_extensions import is_optional
 
 
 class CounterPivotTable(BaseModel):
@@ -67,9 +68,19 @@ class CounterPivotTable(BaseModel):
         ]
 
         if len(counter_fieldnames) > 1:
-            raise TypeError("Only one Counter per model is currently supported.")
+            raise TypeError(
+                "Only one Counter per model is currently supported."
+                f"Found multiple fields with Counter types: {', '.join(counter_fieldnames)}"
+            )
 
-        return counter_fieldnames[0] if counter_fieldnames else None
+        counter_fieldname: str | None = counter_fieldnames[0] if counter_fieldnames else None
+
+        if counter_fieldname:
+            counter_field_info: FieldInfo = cls.model_fields[counter_fieldname]
+            if is_optional(counter_field_info.annotation):
+                raise TypeError(f"Optional Counters are not supported: {counter_fieldname}")
+
+        return counter_fieldname
 
     @final
     @classmethod
