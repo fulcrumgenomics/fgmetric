@@ -1,3 +1,4 @@
+from collections import Counter
 from functools import reduce
 from operator import or_
 from types import GenericAlias
@@ -123,3 +124,8 @@ def is_list(annotation: TypeAnnotation | None) -> bool:
     Matches `list[T]`, `Optional[list[T]]`, and `list[T] | None`.
     """
     return has_origin(annotation, list)
+
+
+def is_counter(annotation: TypeAnnotation | None) -> bool:
+    """True if the type annotation is a Counter."""
+    return has_origin(annotation, Counter)

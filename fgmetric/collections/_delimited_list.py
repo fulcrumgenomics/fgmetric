@@ -1,5 +1,6 @@
 from typing import Any
 from typing import ClassVar
+from typing import TypeAlias
 from typing import final
 
 from pydantic import BaseModel
@@ -11,6 +12,9 @@ from pydantic import field_validator
 
 from fgmetric._typing_extensions import has_optional_elements
 from fgmetric._typing_extensions import is_list
+
+Fieldname: TypeAlias = str
+"""A pydantic model field's name."""
 
 
 # NB: Inheriting from BaseModel is necessary to declare field/model validators on the mixin, and
