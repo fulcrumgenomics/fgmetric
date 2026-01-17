@@ -94,7 +94,7 @@ class Metric(
         return data
 
     @classmethod
-    def _header_fieldnames(cls, by_alias: bool = False) -> list[str]:
+    def _header_fieldnames(cls) -> list[str]:
         """
         Return the fieldnames to use as a header row when writing metrics to a file.
 
@@ -107,9 +107,6 @@ class Metric(
             method omits the `fieldnames` parameter from `csv.DictReader` so that any missing or
             misspecified fields are handled by pydantic's model validation.
 
-        Args:
-            by_alias: If `True`, field aliases will be returned for fields that have them.
-
         Returns:
             The list of fieldnames to use as the header row.
         """
@@ -117,15 +114,8 @@ class Metric(
         # custom model serializer
 
         fieldnames: list[str]
-        if by_alias:
-            fieldnames = [
-                field.alias if field.alias else fieldname
-                for fieldname, field in cls.model_fields.items()
-            ]
-        else:
-            fieldnames = list(cls.model_fields.keys())
+        fieldnames = list(cls.model_fields.keys())
 
-        # TODO fix the interaction between this and by_alias
         if cls._counter_fieldname is None:
             # Short circuit if we don't have a Counter field
             return fieldnames

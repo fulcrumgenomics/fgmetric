@@ -60,9 +60,6 @@ class MetricWriter[T: Metric](AbstractContextManager):
             metric_class: Metric class.
             delimiter: The output file delimiter.
             lineterminator: The string used to terminate lines produced by the MetricWriter.
-
-        Raises:
-            TypeError: If the provided metric class is not a subclass of `Metric`.
         """
         self._metric_class = metric_class
         self._fout = Path(filename).open("w")

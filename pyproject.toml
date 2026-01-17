@@ -32,9 +32,6 @@ classifiers     = [
 "repository" = "https://github.com/fulcrumgenomics/fgmetric"
 "Bug Tracker" = "https://github.com/fulcrumgenomics/fgmetric/issues"
 
-[project.scripts]
-fgmetric = "fgmetric.main:run"
-
 [dependency-groups]
 dev = [
     "ruff ==0.14.4",
