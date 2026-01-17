@@ -69,7 +69,7 @@ class CounterPivotTable(BaseModel):
 
         if len(counter_fieldnames) > 1:
             raise TypeError(
-                "Only one Counter per model is currently supported."
+                "Only one Counter per model is currently supported. "
                 f"Found multiple fields with Counter types: {', '.join(counter_fieldnames)}"
             )
 

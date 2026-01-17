@@ -241,3 +241,41 @@ def test_counter_pivot_table_raises_if_not_enum() -> None:
             counts: Counter[str]
 
     assert str(excinfo.value) == "Counter fields must have a StrEnum type parameter: counts"
+
+
+def test_counter_pivot_table_raises_if_multiple_counters() -> None:
+
+    @unique
+    class FooEnum(StrEnum):
+        FOO = "foo"
+
+    @unique
+    class BarEnum(StrEnum):
+        BAR = "bar"
+
+    with pytest.raises(TypeError) as excinfo:
+
+        class FakeMetric(Metric):
+            name: str
+            foo_counts: Counter[FooEnum]
+            bar_counts: Counter[BarEnum]
+
+    assert str(excinfo.value) == (
+        "Only one Counter per model is currently supported. "
+        "Found multiple fields with Counter types: foo_counts, bar_counts"
+    )
+
+
+def test_counter_pivot_table_raises_if_optional_counter() -> None:
+
+    @unique
+    class FakeEnum(StrEnum):
+        FOO = "foo"
+
+    with pytest.raises(TypeError) as excinfo:
+
+        class FakeMetric(Metric):
+            name: str
+            counts: Counter[FakeEnum] | None
+
+    assert str(excinfo.value) == "Optional Counters are not supported: counts"
