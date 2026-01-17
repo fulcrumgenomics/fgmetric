@@ -1,5 +1,17 @@
 # Development and Testing
 
+## Setup
+
+After cloning the repository, install dependencies and the pre-push hook:
+
+```console
+uv sync --locked
+uv run pre-commit install --hook-type pre-push
+```
+
+The pre-push hook runs `fix-and-check-all` before each push to apply formatting and linting fixes
+and check typing and unit tests.
+
 ## Primary Development Commands
 
 To check and resolve linting issues in the codebase, run:
