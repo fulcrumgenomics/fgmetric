@@ -67,7 +67,6 @@ class CounterPivotTable(BaseModel):
         ]
 
         if len(counter_fieldnames) > 1:
-            # TODO permit multiple Counters, but require their values to be non-overlapping.
             raise TypeError("Only one Counter per model is currently supported.")
 
         return counter_fieldnames[0] if counter_fieldnames else None

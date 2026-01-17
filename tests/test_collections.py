@@ -169,13 +169,13 @@ def test_counter_pivot_table_of_enum(tmp_path: Path) -> None:
     """Test that we can read and write Counters as pivot tables."""
 
     @unique
-    class FakeEnum(StrEnum):  # TODO test with base Enum
+    class FakeEnum(StrEnum):
         FOO = "foo"
         BAR = "bar"
 
     class FakeMetric(Metric):
         name: str
-        counts: Counter[FakeEnum]  # TODO test with counter of str
+        counts: Counter[FakeEnum]
 
     # Test reading
     fpath_to_read = tmp_path / "test.txt"
