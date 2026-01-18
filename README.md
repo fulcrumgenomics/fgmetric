@@ -1,5 +1,6 @@
-# fgmetric: Pydantic-backed Metrics
+# fgmetric
 
+Type-validated Python models for delimited data files.
 
 [![CI](https://github.com/fulcrumgenomics/fgmetric/actions/workflows/python_package.yml/badge.svg?branch=main)](https://github.com/fulcrumgenomics/fgmetric/actions/workflows/python_package.yml?query=branch%3Amain)
 [![Python Versions](https://img.shields.io/badge/python-3.12_|_3.13-blue)](https://github.com/fulcrumgenomics/fgmetric)
@@ -7,71 +8,163 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://docs.astral.sh/ruff/)
 
-This package provides a proof-of-concept alternative implementation of `fgpyo.util.metric.Metric`, using `pydantic` for runtime type validation and coercion.
+## Overview
 
-### Key features:
+`fgmetric` lets you define Python classes ("Metrics") that map directly to rows in CSV/TSV files.
+It handles parsing, type coercion (strings → int, float, bool), and validation automatically using [Pydantic](https://docs.pydantic.dev/latest/).
 
-- **Speed**.
-  By using `pydantic` for type coercion, this implementation can yield a ~5-6x speedup in some workflows compared to pure Python reflection.
-  ([See benchmarks below.](#Benchmarks-vs-fgpyo))
-- **Support for comma-delimited files.**
-  This provides additional flexibility when working with user-provided delimited data files.
-- **Lightweight dependencies.**
-  Requires only `pydantic`, with no need for `attrs` or `pysam`.
+## Installation
 
-### Other notable differences:
+Requires Python 3.12 or later.
 
-- Simplified usage: No need to decorate with `@dataclass` or `@attr.s`, just subclass `Metric`.
-- Cleaner type signatures: `Metric.read()` returns a properly typed iterable, rather than `Iterator[Any]`.
-- Reduced boilerplate: `Metric` is no longer a self-referential generic, so no recursive type annotation.
+```console
+pip install fgmetric
+```
 
-### Example:
+Or with [uv](https://docs.astral.sh/uv/):
+
+```console
+uv add fgmetric
+```
+
+## Why fgmetric?
+
+If you're a bioinformatician or data engineer processing delimited files in Python, you've probably written code like this:
+
+```python
+import csv
+
+with open("metrics.tsv") as f:
+    reader = csv.DictReader(f, delimiter="\t")
+    for row in reader:
+        quality = int(row["mapping_quality"])
+        is_duplicate = row["is_duplicate"].lower() in ("true", "1", "yes")
+        if row["score"]:  # handle empty strings
+            score = float(row["score"])
+        # ... repeat for every field
+```
+
+`fgmetric` replaces this with:
 
 ```py
+for metric in AlignmentMetric.read(path):
+    # metric.mapping_quality is already an int
+    # metric.is_duplicate is already a bool
+    # metric.score is already Optional[float]
+```
+
+**How it compares:**
+- **vs. csv + dataclasses** — Automatic type coercion and validation without boilerplate. Built on Pydantic, so additional custom validators and serializer can be readily added.
+- **vs. pandas** — Unlike pandas, `fgmetric` processes records lazily — you can handle files larger than memory. And `Metric`s are type-validated and can be made immutable, making them safe to pass between functions without defensive copying.
+- **vs. Pydantic alone** — `fgmetric` handles CSV/TSV specifics (header parsing, delimiter configuration) and provides out-of-the box features like empty value handling and Counter field pivoting.
+
+## Quick Start
+
+Define a class to represent each row:
+
+```python
+from pathlib import Path
+from fgmetric import Metric, MetricWriter
+
+
+class AlignmentMetric(Metric):
+    read_name: str
+    mapping_quality: int
+    is_duplicate: bool = False
+```
+
+Then read or write:
+
+```python
+# Reading
+for metric in AlignmentMetric.read(Path("alignments.tsv")):
+    print(f"{metric.read_name}: MQ={metric.mapping_quality}")
+
+# Writing
+metrics = [
+    AlignmentMetric(read_name="read1", mapping_quality=60),
+    AlignmentMetric(read_name="read2", mapping_quality=30, is_duplicate=True),
+]
+with MetricWriter(AlignmentMetric, Path("output.tsv")) as writer:
+    writer.writeall(metrics)
+```
+
+Example input file (`alignments.tsv`):
+
+```tsv
+read_name	mapping_quality	is_duplicate
+read1	60	false
+read2	30	true
+```
+
+Invalid data raises `pydantic.ValidationError` with details about which field failed.
+
+## Core Usage
+
+### Custom Delimiters
+
+Both reading and writing support custom delimiters for working with CSV or other formats:
+
+```python
+# Reading CSV files
+for metric in MyMetric.read(Path("data.csv"), delimiter=","):
+    ...
+
+# Writing CSV files
+with MetricWriter(MyMetric, Path("output.csv"), delimiter=",") as writer:
+    ...
+```
+
+### List Fields
+
+Fields typed as `list[T]` are automatically parsed from and serialized to delimited strings:
+
+```python
+class TaggedRead(Metric):
+    read_id: str
+    tags: list[str]           # "A,B,C" becomes ["A", "B", "C"]
+    scores: list[int]         # "1,2,3" becomes [1, 2, 3]
+    optional_tags: list[str] | None  # "" becomes None
+```
+
+The list delimiter defaults to `,` but can be customized per-metric:
+
+```python
+class SemicolonMetric(Metric):
+    collection_delimiter = ";"
+    values: list[int]  # "1;2;3" becomes [1, 2, 3]
+```
+
+### Counter Fields
+
+When your file has categorical data with one column per category (e.g. base counts A, C, G, T), you can model them as a single `Counter[StrEnum]` field:
+
+```python
+from collections import Counter
+from enum import StrEnum
 from fgmetric import Metric
 
 
-class DemoMetric(Metric):
-    foo: str
-    bar: int
+class Base(StrEnum):
+    A = "A"
+    C = "C"
+    G = "G"
+    T = "T"
 
 
-# type hint optional: `mypy` will infer metrics to be `Iterator[DemoMetric]`
-metrics =  DemoMetric.read("path/to/demo.tsv")
+class BaseCountMetric(Metric):
+    position: int
+    counts: Counter[Base]
+
+
+# Input TSV:
+# position  A   C   G   T
+# 1         10  5   3   2
+
+# Parses to:
+# BaseCountMetric(position=1, counts=Counter({Base.A: 10, Base.C: 5, ...}))
 ```
 
-## Recommended Installation
+## Contributing
 
-Install the Python package and dependency management tool [`uv`](https://docs.astral.sh/uv/getting-started/installation/) using official documentation.
-
-Install the project and its dependencies with:
-
-```console
-uv sync --locked
-```
-
-## Development and Testing
-
-See the [contributing guide](./CONTRIBUTING.md) for more information.
-
-## Benchmarks vs `fgpyo`
-
-On example files with 10,000 and 100,000 rows, using `pydantic` speeds up `Metric` parsing by ~5 fold.
-
-```console
-$ uv run --extra benchmark poe benchmark
-
---------------------------------------------------------------------------- benchmark 'num_rows=1e4': 2 tests ----------------------------------------------------------------------------
-Name (time in ms)           Min                 Max                Mean            StdDev              Median               IQR            Outliers      OPS            Rounds  Iterations
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-test_fgmetric[1e4]      46.9850 (1.0)       56.2292 (1.0)       50.3851 (1.0)      3.3265 (1.0)       49.1207 (1.0)      6.4517 (1.02)          6;0  19.8471 (1.0)          18           1
-test_fgpyo[1e4]        270.8720 (5.77)     282.5591 (5.03)     275.4368 (5.47)     4.5861 (1.38)     274.8490 (5.60)     6.3225 (1.0)           1;0   3.6306 (0.18)          5           1
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
--------------------------------------------------------------------------------- benchmark 'num_rows=1e5': 2 tests --------------------------------------------------------------------------------
-Name (time in ms)             Min                   Max                  Mean             StdDev                Median                IQR            Outliers     OPS            Rounds  Iterations
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-test_fgmetric[1e5]       548.3379 (1.0)        579.5940 (1.0)        563.7652 (1.0)      12.6133 (1.21)       564.8853 (1.0)      20.6046 (1.27)          2;0  1.7738 (1.0)           5           1
-test_fgpyo[1e5]        2,764.4992 (5.04)     2,790.0149 (4.81)     2,775.1369 (4.92)     10.4317 (1.0)      2,776.1375 (4.91)     16.2167 (1.0)           2;0  0.3603 (0.20)          5           1
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-```
+See the [contributing guide](./CONTRIBUTING.md) for development setup and testing instructions.
