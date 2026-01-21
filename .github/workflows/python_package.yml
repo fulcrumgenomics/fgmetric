@@ -5,7 +5,7 @@ on:
   workflow_call:
 
 env:
-  UV_VERSION: 0.9.8
+  UV_VERSION: 0.9.26
 
 jobs:
   Tests:
@@ -15,10 +15,10 @@ jobs:
         PYTHON_VERSION: ["3.12", "3.13"]
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
 
       - name: Install uv
-        uses: astral-sh/setup-uv@85856786d1ce8acfbcc2f13a5f3fbd6b938f9f41  # v7.1.2
+        uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b  # v7.2.0
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: 'true'
