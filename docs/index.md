@@ -57,4 +57,4 @@ with MetricWriter(AlignmentMetric, Path("output.tsv")) as writer:
 - **vs. pandas** --- Processes records lazily, handling files larger than memory. Metrics are type-validated and can be made immutable.
 - **vs. Pydantic alone** --- Handles CSV/TSV specifics (header parsing, delimiter configuration) and provides out-of-the-box features like empty value handling and Counter field pivoting.
 
-[Get started with the User Guide :material-arrow-right:](guide.md){ .md-button }
+[Get started with the User Guide](guide.md)
