@@ -31,7 +31,7 @@ classifiers     = [
 "homepage" = "https://github.com/fulcrumgenomics/fgmetric"
 "repository" = "https://github.com/fulcrumgenomics/fgmetric"
 "Bug Tracker" = "https://github.com/fulcrumgenomics/fgmetric/issues"
-"documentation" = "https://fulcrumgenomics.github.io/fgmetric/"
+"documentation" = "https://fgmetric.readthedocs.io/"
 
 [dependency-groups]
 dev = [

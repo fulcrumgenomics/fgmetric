@@ -1,5 +1,5 @@
 site_name: fgmetric
-site_url: https://fulcrumgenomics.github.io/fgmetric/
+site_url: https://fgmetric.readthedocs.io/en/stable/
 site_description: Type-validated Python models for delimited data files.
 repo_name: fulcrumgenomics/fgmetric
 repo_url: https://github.com/fulcrumgenomics/fgmetric
