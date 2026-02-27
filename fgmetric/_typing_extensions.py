@@ -1,8 +1,13 @@
-from operator import or_
-from functools import reduce
 from collections import Counter
-from types import GenericAlias, NoneType, UnionType
-from typing import Union, cast, get_args, get_origin
+from functools import reduce
+from operator import or_
+from types import GenericAlias
+from types import NoneType
+from types import UnionType
+from typing import Union
+from typing import cast
+from typing import get_args
+from typing import get_origin
 
 type TypeAnnotation = type | UnionType | GenericAlias
 """

@@ -1,11 +1,10 @@
-
-from typing import Self
-from pathlib import Path
-from csv import DictWriter
-from io import TextIOWrapper
-from types import TracebackType
 from collections.abc import Iterable
 from contextlib import AbstractContextManager
+from csv import DictWriter
+from io import TextIOWrapper
+from pathlib import Path
+from types import TracebackType
+from typing import Self
 
 from fgmetric.metric import Metric
 

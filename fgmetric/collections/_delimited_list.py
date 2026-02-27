@@ -1,15 +1,16 @@
-from typing import Any, ClassVar, final
+from typing import Any
+from typing import ClassVar
+from typing import final
 
-from pydantic import (
-    BaseModel,
-    FieldSerializationInfo,
-    SerializerFunctionWrapHandler,
-    ValidationInfo,
-    field_serializer,
-    field_validator,
-)
+from pydantic import BaseModel
+from pydantic import FieldSerializationInfo
+from pydantic import SerializerFunctionWrapHandler
+from pydantic import ValidationInfo
+from pydantic import field_serializer
+from pydantic import field_validator
 
-from fgmetric._typing_extensions import has_optional_elements, is_list
+from fgmetric._typing_extensions import has_optional_elements
+from fgmetric._typing_extensions import is_list
 
 # PEP 695 ``type`` statement (Python 3.12+), replacing the deprecated ``TypeAlias`` from ``typing``.
 type Fieldname = str
@@ -236,8 +237,7 @@ class DelimitedList(BaseModel):
 
             if isinstance(serialized_value, list):
                 # Expected path: map None → "" and join.
-                elements = ["" if item is None else str(
-                    item) for item in serialized_value]
+                elements = ["" if item is None else str(item) for item in serialized_value]
                 return self.collection_delimiter.join(elements)
 
             # Unexpected: ``nxt`` already collapsed the list to a non-list (should not happen

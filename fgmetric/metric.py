@@ -1,13 +1,15 @@
 from abc import ABC
-from pathlib import Path
-from csv import DictReader
-from typing import Any, Self
 from collections.abc import Iterator
+from csv import DictReader
+from pathlib import Path
+from typing import Any
+from typing import Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import model_validator
 
 from fgmetric._typing_extensions import is_optional
-from fgmetric.collections import CounterPivotTable, DelimitedList
+from fgmetric.collections import CounterPivotTable
+from fgmetric.collections import DelimitedList
 
 
 class Metric(
@@ -175,7 +177,7 @@ class Metric(
             ``fieldnames`` to ``DictReader`` so that column discovery and any
             missing/unexpected-field errors are delegated to pydantic's validation.
 
-        TODO:
+        Todo:
             Support returning the correct set of fields when the model defines a custom
             ``model_serializer`` that adds or renames output keys.
 

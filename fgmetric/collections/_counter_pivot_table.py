@@ -1,10 +1,18 @@
 from enum import StrEnum
-from typing import Any, ClassVar, final, get_args
+from typing import Any
+from typing import ClassVar
+from typing import final
+from typing import get_args
 
+from pydantic import BaseModel
+from pydantic import SerializationInfo
+from pydantic import SerializerFunctionWrapHandler
+from pydantic import model_serializer
+from pydantic import model_validator
 from pydantic.fields import FieldInfo
-from pydantic import BaseModel, SerializationInfo, SerializerFunctionWrapHandler, model_serializer, model_validator
 
-from fgmetric._typing_extensions import is_counter, is_optional
+from fgmetric._typing_extensions import is_counter
+from fgmetric._typing_extensions import is_optional
 
 
 class CounterPivotTable(BaseModel):
@@ -161,9 +169,7 @@ class CounterPivotTable(BaseModel):
         if counter_fieldname is not None:
             counter_field_info: FieldInfo = cls.model_fields[counter_fieldname]
             if is_optional(counter_field_info.annotation):
-                raise TypeError(
-                    f"Optional Counter fields are not supported: {counter_fieldname!r}"
-                )
+                raise TypeError(f"Optional Counter fields are not supported: {counter_fieldname!r}")
 
         return counter_fieldname
 
@@ -256,8 +262,7 @@ class CounterPivotTable(BaseModel):
         assert cls._counter_enum is not None
 
         # Seed all enum members at zero so that absent columns are represented, not omitted.
-        counts: dict[StrEnum, Any] = {
-            member: 0 for member in cls._counter_enum}
+        counts: dict[StrEnum, Any] = {member: 0 for member in cls._counter_enum}
 
         # Collect enum-valued keys from the input, removing them so they don't confuse pydantic.
         keys_to_pop: list[str] = []
@@ -317,4 +322,3 @@ class CounterPivotTable(BaseModel):
             data[column_name] = count
 
         return data
-
