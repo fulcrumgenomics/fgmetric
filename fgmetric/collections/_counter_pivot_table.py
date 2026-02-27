@@ -296,8 +296,9 @@ class CounterPivotTable(BaseModel):
         This is the exact inverse of :meth:`_collect_counter_values`.
 
         Note:
-            ``info`` (the ``SerializationInfo`` context) is received but not used — it is
-            accepted to satisfy the ``"wrap"`` serializer signature.
+            In ``mode='json'``, pydantic serializes ``StrEnum`` keys to plain ``str`` before this
+            serializer receives the result of ``nxt(self)``. In ``mode='python'``, keys remain as
+            ``StrEnum`` instances. Both cases are handled transparently.
 
         Example:
             Given ``counts = Counter({Color.RED: 10, Color.GREEN: 20, Color.BLUE: 30})``,
@@ -312,6 +313,8 @@ class CounterPivotTable(BaseModel):
         # Pop the counter dict and write one key per enum member using the member's string value.
         counts = data.pop(self._counter_fieldname)
         for key, count in counts.items():
-            data[key.value] = count
+            column_name = key if isinstance(key, str) else key.value
+            data[column_name] = count
 
         return data
+

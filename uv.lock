@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 
 [[package]]
@@ -154,6 +154,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
+    { name = "pytest-benchmark" },
 ]
 
 [package.optional-dependencies]
@@ -180,6 +181,7 @@ ipython = [
 requires-dist = [
     { name = "fgpyo", marker = "extra == 'benchmark'", specifier = "~=1.2.0" },
     { name = "pydantic", specifier = ">=2.11.4" },
+    { name = "pytest-benchmark", specifier = ">=5.1.0" },
     { name = "pytest-benchmark", marker = "extra == 'benchmark'", specifier = "~=5.1.0" },
 ]
 provides-extras = ["benchmark"]
