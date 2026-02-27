@@ -24,10 +24,6 @@ jobs:
           enable-cache: 'true'
           cache-suffix: ${{ matrix.PYTHON_VERSION }}
 
-      - name: Install dependencies
-        run: |
-          uv sync --locked
-
       - name: Test the library
         run: |
-          uv run poe check-all
+          uv run --locked poe check-all

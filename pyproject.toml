@@ -62,7 +62,6 @@ fix-all.sequence    = [
     "fix-lint"
 ]
 
-check-lock   = "uv lock --check"
 check-format = "ruff format --check --diff"
 check-lint   = "ruff check"
 check-tests  = "pytest --ignore=tests/benchmarks"
@@ -70,7 +69,6 @@ check-typing = "mypy"
 
 check-all.ignore_fail = "return_non_zero"
 check-all.sequence    = [
-    "check-lock",
     "check-format",
     "check-lint",
     "check-typing",
@@ -78,7 +76,6 @@ check-all.sequence    = [
 ]
 
 fix-and-check-all.sequence    = [
-    "check-lock",
     "fix-format",
     "fix-lint",
     "check-typing",
