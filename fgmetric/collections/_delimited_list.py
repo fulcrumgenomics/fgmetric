@@ -1,88 +1,132 @@
-from typing import Any
-from typing import ClassVar
-from typing import TypeAlias
-from typing import final
+from typing import Any, ClassVar, final
 
-from pydantic import BaseModel
-from pydantic import FieldSerializationInfo
-from pydantic import SerializerFunctionWrapHandler
-from pydantic import ValidationInfo
-from pydantic import field_serializer
-from pydantic import field_validator
+from pydantic import (
+    BaseModel,
+    FieldSerializationInfo,
+    SerializerFunctionWrapHandler,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+)
 
-from fgmetric._typing_extensions import has_optional_elements
-from fgmetric._typing_extensions import is_list
+from fgmetric._typing_extensions import has_optional_elements, is_list
 
-Fieldname: TypeAlias = str
+# PEP 695 ``type`` statement (Python 3.12+), replacing the deprecated ``TypeAlias`` from ``typing``.
+type Fieldname = str
 """A pydantic model field's name."""
+
+__all__ = ["DelimitedList", "Fieldname"]
 
 
 # NB: Inheriting from BaseModel is necessary to declare field/model validators on the mixin, and
-# for the class-level validations defined in `__pydantic_init_subclass__` to work.
+# for the class-level validations defined in ``__pydantic_init_subclass__`` to work.
 class DelimitedList(BaseModel):
     """
-    Serialize and deserialize delimited lists of (de)serializable types.
+    Mixin that serializes and deserializes ``list[T]`` fields as delimiter-separated strings.
 
-    When this mixin is added to `Metric`, fields annotated as `list[T]` will be read and written as
-    comma-delimited strings. During validation, a comma-delimited string will be split into a list
-    and its elements validated as instances of `T`. During serialization, the list elements will be
-    serialized to string and then joined into a comma-delimited string.
+    When added to a pydantic model, any field annotated as ``list[T]`` is automatically:
 
-    The list type `T` may be any serializable type. The field may be annotated as `list[T]` or
-    `list[T] | None` - as with any primitive type, `None` will be validated from and serialized to
-    the empty string.
+    * **Deserialized** — a delimited string is split on ``collection_delimiter`` and each
+      segment is validated as ``T``.
+    * **Serialized** — list elements are serialized individually (using pydantic's standard
+      logic), then joined back into a single delimited string.
 
-    The delimiter may be configured by specifying the `collection_delimiter` class variable when
-    declaring a model.
+    The element type ``T`` may be any type that pydantic can serialize and deserialize (e.g.
+    ``int``, ``float``, ``datetime``, nested models, etc.).
+
+    **Field annotation forms**
+
+    ============================  ======================  ==================================
+    Annotation                    Empty string input      Non-empty string input
+    ============================  ======================  ==================================
+    ``list[T]``                   ``[]``                  ``["a", "b"]``
+    ``list[T] | None``            ``None``                ``["a", "b"]``
+    ``list[T | None]``            ``[]``                  ``["a", None, "b"]`` (on ``"a,,b"``)
+    ============================  ======================  ==================================
 
     Note:
-        Roundtrips are lossy if list elements contain the delimiter character. For example, with the
-        default comma delimiter, `["a,b", "c"]` serializes to `"a,b,c"` and deserializes back to
-        `["a", "b", "c"]`. Avoid using delimiters that may appear in element values.
+        **Round-trips are lossy** if element values contain the delimiter character. For example,
+        with the default comma delimiter, ``["a,b", "c"]`` serializes to ``"a,b,c"`` and
+        deserializes back to ``["a", "b", "c"]``. Choose a delimiter that cannot appear in
+        element values.
+
+    Note:
+        ``collection_delimiter`` must differ from the enclosing file's field separator. For
+        example, do **not** set ``collection_delimiter = "\\t"`` when writing TSV files — this
+        causes silent data corruption because the list delimiter becomes indistinguishable from
+        the column delimiter.
 
     Examples:
-        Basic usage with comma delimiter (default):
+        Basic usage — comma delimiter (default):
 
         ```python
-        class MyMetric(Metric):
-            tags: list[int]  # "1,2,3" becomes [1, 2, 3]
+        class MyMetric(DelimitedList):
+            tags: list[int]
+
+        MyMetric(tags="1,2,3").tags        # → [1, 2, 3]
+        MyMetric(tags=[1, 2, 3]).model_dump()  # → {"tags": "1,2,3"}
         ```
 
         Custom delimiter:
 
         ```python
-        class MyMetric(Metric):
+        class MyMetric(DelimitedList):
             collection_delimiter = ";"
-            tags: list[int]  # "1;2;3" becomes [1, 2, 3]
+            tags: list[int]
+
+        MyMetric(tags="1;2;3").tags        # → [1, 2, 3]
+        MyMetric(tags=[1, 2, 3]).model_dump()  # → {"tags": "1;2;3"}
         ```
 
-        Optional list field:
+        Optional list field — the whole field may be absent:
 
         ```python
-        class MyMetric(Metric):
-            tags: list[int] | None  # "" becomes None
+        class MyMetric(DelimitedList):
+            tags: list[int] | None
+
+        MyMetric(tags="").tags             # → None
+        MyMetric(tags=None).model_dump()   # → {"tags": ""}
         ```
 
-        List field with Optional elements:
+        List with optional elements — individual elements may be absent:
 
         ```python
-        class MyMetric(Metric):
-            tags: list[int | None]  # "1,,3" becomes [1, None, 3]
+        class MyMetric(DelimitedList):
+            tags: list[int | None]
+
+        MyMetric(tags="1,,3").tags         # → [1, None, 3]
+        MyMetric(tags=[1, None, 3]).model_dump()  # → {"tags": "1,,3"}
         ```
     """
 
+    # Override in a subclass to change the delimiter for all list fields on that model.
     collection_delimiter: ClassVar[str] = ","
+
+    # Populated at subclass creation time by ``__pydantic_init_subclass__``.
+    # Stored as class variables so that the per-field validator/serializer can do O(1) lookups
+    # rather than inspecting annotations on every call.
     _list_fieldnames: ClassVar[set[str]]
     _optional_element_fieldnames: ClassVar[set[str]]
 
     @classmethod
     def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
         """
-        Validations of the user-defined model.
+        Validate the subclass definition and pre-compute field metadata at class-creation time.
 
-        1. The collection delimiter must be a single character.
-        2. The names of all fields annotated as `list[T]` or `list[T] | None` are stored in the
-           private `_list_fieldnames` class variable.
+        Called automatically by pydantic when a subclass of this mixin is defined.
+        Performing these checks and caches here — rather than inside the validators — means
+        the work is done once per class, not once per field value.
+
+        Steps:
+
+        1. Validate that ``collection_delimiter`` is exactly one character (raises
+           ``ValueError`` immediately if not, so misconfigured models are caught at import
+           time rather than at first use).
+        2. Cache the names of all ``list[T]`` (and ``list[T] | None``) fields in
+           ``_list_fieldnames`` for O(1) lookup in :meth:`_is_list_field`.
+        3. Cache the names of all ``list[T | None]`` fields in
+           ``_optional_element_fieldnames`` so that :meth:`_split_lists` knows which fields
+           need empty-string-to-``None`` conversion.
         """
         super().__pydantic_init_subclass__(**kwargs)
 
@@ -98,26 +142,56 @@ class DelimitedList(BaseModel):
 
     @classmethod
     def _require_single_character_collection_delimiter(cls) -> None:
-        """Require collection delimiters to be single characters."""
+        """
+        Raise ``ValueError`` if ``collection_delimiter`` is not exactly one character.
+
+        Enforced at class-creation time (inside ``__pydantic_init_subclass__``) so that a
+        misconfigured model fails loudly at import time rather than silently producing
+        malformed output at runtime.
+        """
         if len(cls.collection_delimiter) != 1:
             raise ValueError(
-                f"Class collection delimiter must be a single character: {cls.collection_delimiter}"
+                f"collection_delimiter must be a single character, got: {cls.collection_delimiter!r}"
             )
 
     @final
     @field_validator("*", mode="before")
     @classmethod
     def _split_lists(cls, value: Any, info: ValidationInfo) -> Any:
-        """Split any fields annotated as `list[T]` on a comma delimiter."""
+        """
+        Split a delimiter-separated string into a list before pydantic validates the field.
+
+        This validator runs in ``"before"`` mode, meaning it receives the raw input value
+        *before* pydantic applies type coercion. Only fields in ``_list_fieldnames`` are
+        affected; all other fields pass through unchanged.
+
+        Deserialization rules:
+
+        ==================  ========================  ====================================
+        Input               Field annotation          Result
+        ==================  ========================  ====================================
+        ``""``              ``list[T]``               ``[]``
+        ``""``              ``list[T] | None``        ``[]`` (pydantic coerces to ``None``)
+        ``"a,b,c"``         ``list[T]``               ``["a", "b", "c"]`` (pre-coercion)
+        ``"a,,c"``          ``list[T | None]``        ``["a", None, "c"]``
+        non-string          any                       passed through unchanged
+        ==================  ========================  ====================================
+
+        Note:
+            Non-string inputs (e.g. a list passed directly in Python) are returned as-is,
+            allowing programmatic construction of model instances without going through the
+            string-splitting path.
+        """
         if isinstance(value, str) and cls._is_list_field(info.field_name):
             if value:
                 value = value.split(cls.collection_delimiter)
 
-                # Convert empty strings to None for list[T | None] fields
+                # For ``list[T | None]`` fields, map empty segments back to ``None`` so that
+                # ``"a,,c"`` correctly produces ``["a", None, "c"]`` rather than ``["a", "", "c"]``.
                 if info.field_name in cls._optional_element_fieldnames:
                     value = [None if el == "" else el for el in value]
-
             else:
+                # An empty string represents an empty list, not a list with one empty element.
                 value = []
 
         return value
@@ -127,28 +201,59 @@ class DelimitedList(BaseModel):
     def _join_lists(
         self,
         value: Any,
-        nxt: SerializerFunctionWrapHandler,  # noqa: ARG002
+        nxt: SerializerFunctionWrapHandler,
         info: FieldSerializationInfo,
     ) -> Any:
-        """Join any fields annotated as `list[T]` with a delimiter."""
+        """
+        Join a list into a delimiter-separated string after pydantic serializes each element.
+
+        This serializer runs in ``"wrap"`` mode: ``nxt`` is pydantic's default serializer,
+        which is called first to serialize each list element individually (applying all
+        standard pydantic logic — datetime formatting, nested model dumping, enum values,
+        etc.). The resulting list of strings is then joined with ``collection_delimiter``.
+
+        Only fields in ``_list_fieldnames`` are affected; all other fields are passed
+        directly to ``nxt``.
+
+        Serialization rules:
+
+        =====================  =============================
+        Input element value    Output segment
+        =====================  =============================
+        ``None``               ``""``  (empty segment)
+        any serializable ``T`` ``str(serialized_value)``
+        =====================  =============================
+
+        Note:
+            The ``None`` → ``""`` mapping is the exact inverse of the ``""`` → ``None``
+            mapping in :meth:`_split_lists`, ensuring lossless round-trips for
+            ``list[T | None]`` fields (provided elements do not contain the delimiter).
+        """
         if isinstance(value, list) and self._is_list_field(info.field_name):
-            # Let the default serializer handle each item first. This should return a list of
-            # serialized values, applying default serialization to each list element.
+            # Delegate to pydantic's default serializer first so that each element is
+            # serialized according to its own type (e.g. a ``datetime`` becomes an ISO string).
             serialized_value = nxt(value)
 
             if isinstance(serialized_value, list):
-                # If the handler returned a list, join it. (This is the expected branch.)
-                # Also serialize `None` back to empty string.
-                elements = ["" if item is None else str(item) for item in serialized_value]
+                # Expected path: map None → "" and join.
+                elements = ["" if item is None else str(
+                    item) for item in serialized_value]
                 return self.collection_delimiter.join(elements)
-            else:
-                # If the handler already serialized to something else (unlikely), return as-is.
-                return serialized_value
+
+            # Unexpected: ``nxt`` already collapsed the list to a non-list (should not happen
+            # with standard pydantic serializers, but guard against custom ones).
+            return serialized_value
 
         return nxt(value)
 
     @final
     @classmethod
     def _is_list_field(cls, field_name: str | None) -> bool:
-        """True if the field is annotated as `list[T]` on the class model."""
+        """
+        Return ``True`` if *field_name* refers to a ``list[T]`` field on this model.
+
+        Uses the pre-computed ``_list_fieldnames`` set for O(1) lookup.
+        Returns ``False`` for ``None`` (pydantic may pass ``None`` when the field name is
+        unavailable, e.g. during root validation).
+        """
         return field_name is not None and field_name in cls._list_fieldnames

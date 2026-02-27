@@ -1,23 +1,29 @@
-from contextlib import AbstractContextManager
+
+from typing import Self
+from pathlib import Path
 from csv import DictWriter
 from io import TextIOWrapper
-from pathlib import Path
 from types import TracebackType
-from typing import Iterable
-from typing import Type
+from collections.abc import Iterable
+from contextlib import AbstractContextManager
 
 from fgmetric.metric import Metric
 
 
 class MetricWriter[T: Metric](AbstractContextManager):
     """
-    Context manager for writing Metric instances to delimited text files.
+    Context manager for writing :class:`Metric` instances to delimited text files.
 
-    This class provides a convenient interface for serializing Metric objects to TSV, CSV, or other
-    delimited file formats. It automatically writes column headers based on the Metric class fields
-    and handles the conversion from Pydantic models to dictionary rows. The writer implements the
-    context manager protocol for safe file handling and supports both single and batch writing
-    operations. Field aliases are respected when writing headers and data.
+    ``MetricWriter`` serializes ``Metric`` objects to TSV, CSV, or any other single-character
+    delimited format. The header row is written automatically on construction using
+    :meth:`Metric._header_fieldnames`, which correctly expands ``Counter[StrEnum]`` fields into
+    one column per enum member.
+
+    All pydantic serializers registered on the ``Metric`` subclass (list joining,
+    counter pivoting, etc.) are applied automatically via :meth:`pydantic.BaseModel.model_dump`.
+
+    Use as a context manager to guarantee the underlying file is closed even if an exception
+    occurs during writing:
 
     Example:
         ```python
@@ -26,24 +32,28 @@ class MetricWriter[T: Metric](AbstractContextManager):
             mapping_quality: int
             is_duplicate: bool = False
 
-        # Write metrics to a TSV file
         metrics = [
             AlignmentMetric(read_name="read1", mapping_quality=60, is_duplicate=False),
             AlignmentMetric(read_name="read2", mapping_quality=30, is_duplicate=True),
         ]
 
-        with MetricWriter(AlignmentMetric, "output.txt") as writer:
+        with MetricWriter(AlignmentMetric, Path("output.tsv")) as writer:
             writer.writeall(metrics)
         ```
 
     Note:
-        The file is opened immediately upon initialization and the header row is written
-        automatically. Use the context manager interface to ensure proper file closure.
+        The output file is opened with ``encoding="utf-8"`` to match the ``utf-8-sig``
+        encoding used by :meth:`Metric.read` (the BOM is stripped on reading, not written).
+
+    Note:
+        The file is opened and the header is written immediately in ``__init__``, before
+        ``__enter__`` is called. Always use the context manager form (``with`` statement)
+        to ensure the file is properly closed.
     """
 
     _metric_class: type[T]
     _fout: TextIOWrapper
-    _writer: DictWriter
+    _writer: DictWriter[str]
 
     def __init__(
         self,
@@ -53,65 +63,69 @@ class MetricWriter[T: Metric](AbstractContextManager):
         lineterminator: str = "\n",
     ) -> None:
         """
-        Initialize a new `MetricWriter`.
+        Open *filename* for writing and write the header row immediately.
 
         Args:
-            filename: Path to the file to write.
-            metric_class: Metric class.
-            delimiter: The output file delimiter.
-            lineterminator: The string used to terminate lines produced by the MetricWriter.
+            metric_class: The :class:`Metric` subclass whose instances will be written.
+                Determines the header columns via :meth:`Metric._header_fieldnames`.
+            filename: Path to the output file. Created if it does not exist; truncated
+                if it does.
+            delimiter: Single-character field separator. Defaults to ``"\\t"`` (TSV).
+            lineterminator: String used to terminate each written row. Defaults to ``"\\n"``.
         """
         self._metric_class = metric_class
-        self._fout = Path(filename).open("w")
-
+        # Explicit UTF-8 encoding ensures consistent output across platforms (avoids the
+        # system-default encoding on Windows, e.g. cp1252).
+        self._fout = Path(filename).open("w", encoding="utf-8")
         self._writer = DictWriter(
             f=self._fout,
             fieldnames=self._metric_class._header_fieldnames(),
             delimiter=delimiter,
             lineterminator=lineterminator,
         )
-
         self._writer.writeheader()
 
-    def __enter__(self) -> "MetricWriter":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
         self,
-        exc_type: Type[BaseException] | None = None,
-        exc_value: BaseException | None = None,
-        traceback: TracebackType | None = None,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         self.close()
         super().__exit__(exc_type, exc_value, traceback)
 
     def close(self) -> None:
-        """Close the underlying file handle."""
+        """Flush and close the underlying file handle."""
         self._fout.close()
 
     def write(self, metric: T) -> None:
         """
-        Write a single Metric instance to file.
+        Serialize *metric* and write it as a single row.
 
-        The Metric is converted to a dictionary and then written using the underlying `DictWriter`.
+        The metric is serialized to a JSON-compatible dict via
+        ``metric.model_dump(mode="json")``, which ensures all pydantic serializers run
+        (list joining, counter pivoting, enum coercion, etc.) and that all values are
+        JSON-primitive types (``str``, ``int``, ``float``, ``bool``, ``None``) rather than
+        raw Python objects. ``DictWriter`` then writes the dict as a delimited row.
 
         Args:
-            metric: An instance of the specified Metric.
-
-        Raises:
-            TypeError: If the provided `metric` is not an instance of the Metric class used to
-                parametrize the writer.
+            metric: A validated instance of the ``Metric`` subclass this writer was
+                constructed with.
         """
-        self._writer.writerow(metric.model_dump())
+        self._writer.writerow(metric.model_dump(mode="json"))
 
     def writeall(self, metrics: Iterable[T]) -> None:
         """
-        Write multiple Metric instances to file.
+        Serialize and write each metric in *metrics* as a row.
 
-        Each Metric is converted to a dictionary and then written using the underlying `DictWriter`.
+        Equivalent to calling :meth:`write` for each element. The iterable is consumed
+        lazily, so generators and other single-pass iterables are fully supported.
 
         Args:
-            metrics: A sequence of instances of the specified Metric.
+            metrics: Any iterable of validated ``Metric`` instances.
         """
         for metric in metrics:
             self.write(metric)
