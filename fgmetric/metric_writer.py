@@ -61,7 +61,7 @@ class MetricWriter[T: Metric](AbstractContextManager):
         delimiter: str = "\t",
         lineterminator: str = "\n",
     ) -> None:
-        """
+        r"""
         Open *filename* for writing and write the header row immediately.
 
         Args:

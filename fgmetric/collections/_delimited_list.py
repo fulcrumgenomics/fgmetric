@@ -22,7 +22,7 @@ __all__ = ["DelimitedList", "Fieldname"]
 # NB: Inheriting from BaseModel is necessary to declare field/model validators on the mixin, and
 # for the class-level validations defined in ``__pydantic_init_subclass__`` to work.
 class DelimitedList(BaseModel):
-    """
+    r"""
     Mixin that serializes and deserializes ``list[T]`` fields as delimiter-separated strings.
 
     When added to a pydantic model, any field annotated as ``list[T]`` is automatically:
@@ -152,7 +152,8 @@ class DelimitedList(BaseModel):
         """
         if len(cls.collection_delimiter) != 1:
             raise ValueError(
-                f"collection_delimiter must be a single character, got: {cls.collection_delimiter!r}"
+                "collection_delimiter must be a single character, got: "
+                f"{cls.collection_delimiter!r}"
             )
 
     @final

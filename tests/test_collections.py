@@ -240,10 +240,12 @@ def test_counter_pivot_table_raises_if_not_enum() -> None:
             name: str
             counts: Counter[str]
 
-    assert (
-        str(excinfo.value)
-        == "Counter fields must have a StrEnum type parameter, got collections.Counter[str] for field 'counts'"
+    expected = (
+        "Counter fields must have a StrEnum type parameter, "
+        "got collections.Counter[str] for field 'counts'"
     )
+
+    assert str(excinfo.value) == expected
 
 
 def test_counter_pivot_table_raises_if_multiple_counters() -> None:
@@ -264,7 +266,8 @@ def test_counter_pivot_table_raises_if_multiple_counters() -> None:
             bar_counts: Counter[BarEnum]
 
     assert str(excinfo.value) == (
-        "Only one Counter per model is currently supported. Found multiple Counter fields: foo_counts, bar_counts"
+        "Only one Counter per model is currently supported. "
+        "Found multiple Counter fields: foo_counts, bar_counts"
     )
 
 

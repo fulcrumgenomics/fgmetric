@@ -74,7 +74,7 @@ class Metric(
 
     @classmethod
     def read(cls, path: Path, delimiter: str = "\t") -> Iterator[Self]:
-        """
+        r"""
         Yield validated ``Metric`` instances from a delimited text file.
 
         Each non-header row is passed to :meth:`pydantic.BaseModel.model_validate` as a
