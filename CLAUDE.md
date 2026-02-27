@@ -50,26 +50,67 @@ The public API is two classes: `Metric` (read) and `MetricWriter` (write), expor
 
 **Mixin MRO**: `Metric(DelimitedList, CounterPivotTable, BaseModel, ABC)`. Both mixins use `__pydantic_init_subclass__()` to cache field metadata at class definition time.
 
-## Conventions
-
-- **Type hints**: Strict mypy (all strict flags enabled). Use modern syntax: `T | None`, `list[T]`, `type[T]`.
-- **Docstrings**: Google-style, enforced by ruff. Summary on second line after opening quotes (D213 selected, D212 ignored).
-- **Line length**: 100 characters.
-- **Imports**: Force single-line (`isort.force-single-line = true`).
-- **Linting**: Ruff with preview mode. B rules are unfixable (manual fix required). Test files exempt from D103 (missing docstring).
-- **Testing**: pytest with `--import-mode=importlib`. Use `tmp_path` fixture for file I/O. Parametrize tests for multiple scenarios.
-- **Git discipline**: Explicit `git add {filepath}` (never `git add .`). Commits scoped to <400 lines of diff.
-
 ## Core Principles
 
 **Priority order:** Correctness → Readability → Simplicity → Performance
 
-1. **Correctness:** Structure code to be testable; isolate complex logic for unit testing.
+1. **Correctness:** Correct implementation first. Ask and profile before optimizing.
 2. **Readability:** If you'd change it on a rewrite, refactor now.
 3. **Simplicity:** Prefer recognizable patterns. Don't introduce new patterns without discussion.
-4. **Performance:** Correct implementation first. Ask and profile before optimizing.
+
+## Code Style
+
+### Typing
+- Strict mypy (all strict flags enabled). Use modern syntax: `T | None`, `list[T]`, `type[T]`.
+- Type annotations required on all function parameters and returns.
+- Annotate locals when: they become return values, or called function lacks hints.
+- **Parameters:** Accept the most general type practical (e.g., `Iterable` over `List`).
+- **Returns:** Return the most specific type without exposing implementation details.
+- Use type aliases or `NewType` for complex structures. Avoid `Any`.
+
+### Documentation
+- **Docstrings**: Google-style, enforced by ruff. Summary on second line after opening quotes.
+- **Doc comments (required on all public functions/classes):** What it does, parameters and return value, constraints, exceptions raised, side effects.
+- **Code comments:** Explain non-obvious choices and complex logic. Never comment self-evident code.
+
+### Organization
+- Extract logic into small–medium functions with clear inputs/outputs
+- Scope variables tightly; limit visibility to where needed
+- Use block comments for visual separation when function extraction isn't practical
+
+### Naming
+- Meaningful names, even if long: `species_to_ref_fasta_map` not `species_map`
+- Short names only for tight scope (loop indices, single-line lambdas)
+- Signal behavior in function names: `to_y()`, `is_valid()` → returns value; `update_x()` → side effect
+
+### Functions and Design
+- Functions should have **either** returns **or** side effects, not both (exceptions: logging, caching)
+- Isolate I/O at module boundaries; keep core logic as pure functions
+- Prefer `@dataclass(frozen=True)` and Pydantic models with `frozen=True`
+- Balance functional, OOP, and imperative — use what's clearest
+- Know your utility libraries; import rather than writing one-offs
+
+## Error Handling
+
+- Fail fast with informative messages at I/O boundaries
+- Never silently swallow exceptions; log or re-raise with context
+- When a loop may generate multiple errors, collect them and raise once at the end
+- Error messages should include: what failed, why, and how to fix (if known)
+
+## Testing
+
+- pytest with `--import-mode=importlib`. Use `tmp_path` fixture for file I/O. Parametrize tests for multiple scenarios.
+- Generate test data programmatically; avoid committing test data files
+- Test behavior, not implementation—tests should survive refactoring
+- Cover: expected behavior, error conditions, boundary cases
+- Scale rigor to code longevity: thorough for shared code, lighter for one-off scripts
+- New public functions: at least one happy-path test + one error case
+- Bug fixes: add a regression test that would have caught the bug
+- Performance-critical code: include benchmark or explain in PR why not needed
 
 ## Git Workflow
+
+- Explicit `git add {filepath}` (never `git add .`). Commits scoped to <400 lines of diff.
 
 ### Commit Granularity
 
@@ -115,62 +156,6 @@ Detailed body explaining:
 - Use `.gitignore` liberally
 - Never commit: IDE files, personal test files, local debug data, commented-out code
 
-## Code Style
-
-### Organization
-- Extract logic into small–medium functions with clear inputs/outputs
-- Scope variables tightly; limit visibility to where needed
-- Use block comments for visual separation when function extraction isn't practical
-
-### Naming
-- Meaningful names, even if long: `species_to_ref_fasta_map` not `species_map`
-- Short names only for tight scope (loop indices, single-line lambdas)
-- Signal behavior in function names: `to_y()`, `is_valid()` → returns value; `update_x()` → side effect
-
-### Documentation
-
-**Doc comments (required on all public functions/classes):**
-- What it does
-- Parameters and return value
-- Constraints, exceptions raised, side effects
-
-**Code comments:**
-- Explain non-obvious choices and complex logic
-- Never comment self-evident code
-
-### Type Signatures
-- **Parameters:** Accept the most general type practical (e.g., `Iterable` over `List`)
-- **Returns:** Return the most specific type without exposing implementation details
-
-### Functions
-- Functions should have **either** returns **or** side effects, not both
-- Exceptions: logging, caching (where side effect is performance-only)
-
-### Pragmatism
-- Balance functional, OOP, and imperative—use what's clearest
-- When in doubt, prefer pure functions and immutable data
-- Know your utility libraries; contribute upstream rather than writing one-offs
-
-## Error Handling
-
-- Fail fast with informative messages at I/O boundaries
-- Never silently swallow exceptions; log or re-raise with context
-- When a loop may generate multiple errors, collect them and raise once at the end
-- Error messages should include: what failed, why, and how to fix (if known)
-
-## Testing
-
-### Principles
-- Generate test data programmatically; avoid committing test data files
-- Test behavior, not implementation—tests should survive refactoring
-- Cover: expected behavior, error conditions, boundary cases
-- Scale rigor to code longevity: thorough for shared code, lighter for one-off scripts
-
-### Coverage Expectations
-- New public functions: at least one happy-path test + one error case
-- Bug fixes: add a regression test that would have caught the bug
-- Performance-critical code: include benchmark or explain in PR why not needed
-
 ## Documentation Maintenance
 
 When modifying code, update as needed:
@@ -180,17 +165,3 @@ When modifying code, update as needed:
 - [ ] Migration notes (if breaking change)
 
 Reference issue/PR numbers in CHANGELOG entries.
-
-## Python-Specific
-
-### Style
-- Heavier use of classes and type annotations than typical Python
-- Prefer `@dataclass(frozen=True)` and Pydantic models with `frozen=True`
-- Isolate I/O at module boundaries; keep core logic as pure functions
-
-### Typing
-- **Required:** Type annotations on all function parameters and returns
-- Annotate locals when: they become return values, or called function lacks hints
-- Use type aliases or `NewType` for complex structures
-- Avoid `Any`—prefer type alias or `TypeVar`
-
