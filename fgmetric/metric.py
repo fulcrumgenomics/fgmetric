@@ -60,7 +60,15 @@ class Metric(
 
     @classmethod
     def read(cls: Type[T], path: Path, delimiter: str = "\t") -> Iterator[T]:
-        """Read Metric instances from file."""
+        """
+        Read Metric instances from file.
+
+        Example:
+            ```python
+            for m in AlignmentMetric.read(Path("out.tsv")):
+                print(m.read_name, m.mapping_quality)
+            ```
+        """
         # NOTE: the utf-8-sig encoding is required to auto-remove BOM from input file headers
         with path.open(encoding="utf-8-sig") as fin:
             for record in DictReader(fin, delimiter=delimiter):
@@ -109,6 +117,15 @@ class Metric(
 
         Returns:
             The list of fieldnames to use as the header row.
+
+        Example:
+            Given a model with ``name: str`` and ``counts: Counter[Color]`` where
+            ``Color`` has members ``RED``, ``GREEN``, ``BLUE``:
+
+            ```python
+            cls._header_fieldnames()
+            # -> ["name", "red", "green", "blue"]
+            ```
         """
         # TODO: support returning the set of fields that would be constructed if the class has a
         # custom model serializer
