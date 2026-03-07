@@ -67,9 +67,7 @@ def test_writer_with_counter_metric(tmp_path: Path) -> None:
     fpath = tmp_path / "test.txt"
 
     with MetricWriter(CounterMetric, fpath) as writer:
-        writer.write(
-            CounterMetric(name="test", counts=Counter({FakeEnum.FOO: 3, FakeEnum.BAR: 4}))
-        )
+        writer.write(CounterMetric(name="test", counts=Counter({FakeEnum.FOO: 3, FakeEnum.BAR: 4})))
 
     with fpath.open("r") as f:
         assert next(f) == "name\tfoo\tbar\n"
