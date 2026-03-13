@@ -64,14 +64,18 @@ class MetricWriter[T: Metric](AbstractContextManager):
         self._metric_class = metric_class
         self._fout = Path(filename).open("w")
 
-        self._writer = DictWriter(
-            f=self._fout,
-            fieldnames=self._metric_class._header_fieldnames(),
-            delimiter=delimiter,
-            lineterminator=lineterminator,
-        )
+        try:
+            self._writer = DictWriter(
+                f=self._fout,
+                fieldnames=self._metric_class._header_fieldnames(),
+                delimiter=delimiter,
+                lineterminator=lineterminator,
+            )
 
-        self._writer.writeheader()
+            self._writer.writeheader()
+        except Exception:
+            self._fout.close()
+            raise
 
     def __enter__(self) -> "MetricWriter":
         return self
