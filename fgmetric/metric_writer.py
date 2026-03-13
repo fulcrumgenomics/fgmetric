@@ -62,7 +62,7 @@ class MetricWriter[T: Metric](AbstractContextManager):
             lineterminator: The string used to terminate lines produced by the MetricWriter.
         """
         self._metric_class = metric_class
-        self._fout = Path(filename).open("w")
+        self._fout = Path(filename).open("w", encoding="utf-8")
 
         try:
             self._writer = DictWriter(
